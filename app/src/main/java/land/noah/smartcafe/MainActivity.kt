@@ -11,11 +11,13 @@ import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
 import land.noah.smartcafe.data.sampleMenu
 import land.noah.smartcafe.model.CartItem
+import land.noah.smartcafe.model.Feedback
 import land.noah.smartcafe.model.MenuItem
 import land.noah.smartcafe.model.Order
 import land.noah.smartcafe.model.OrderItem
 import land.noah.smartcafe.model.OrderStatus
 import land.noah.smartcafe.ui.screens.CartScreen
+import land.noah.smartcafe.ui.screens.FeedbackScreen
 import land.noah.smartcafe.ui.screens.LoginScreen
 import land.noah.smartcafe.ui.screens.MenuScreen
 import land.noah.smartcafe.ui.screens.OrderConfirmationScreen
@@ -61,6 +63,40 @@ class MainActivity : ComponentActivity() {
 
                 var showingOrderHistory by remember {
                     mutableStateOf(false)
+                }
+
+                var feedback by remember {
+                    mutableStateOf<List<Feedback>>(emptyList())
+                }
+
+                var feedbackOrder by remember {
+                    mutableStateOf<Order?>(null)
+                }
+
+                fun submitFeedback(
+                    orderId: Long,
+                    rating: Int,
+                    comment: String
+                ) {
+                    val currentUser = auth.currentUser ?: return
+
+                    if (rating !in 1..5) {
+                        return
+                    }
+
+                    val newFeedback = Feedback(
+                        orderId = orderId,
+                        customerId = currentUser.uid,
+                        rating = rating,
+                        comment = comment.trim(),
+                        createdAt = System.currentTimeMillis()
+                    )
+
+                    feedback = feedback
+                        .filterNot { existingFeedback ->
+                            existingFeedback.orderId == orderId &&
+                                    existingFeedback.customerId == currentUser.uid
+                        } + newFeedback
                 }
 
                 fun addToCart(menuItem: MenuItem) {
@@ -189,6 +225,26 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        feedbackOrder != null -> {
+                            val order = feedbackOrder!!
+
+                            FeedbackScreen(
+                                order = order,
+                                onSubmit = { rating, comment ->
+                                    submitFeedback(
+                                        orderId = order.id,
+                                        rating = rating,
+                                        comment = comment
+                                    )
+
+                                    feedbackOrder = null
+                                },
+                                onBack = {
+                                    feedbackOrder = null
+                                }
+                            )
+                        }
+
                         showingCart -> {
                             CartScreen(
                                 cartItems = cartItems,
@@ -219,6 +275,12 @@ class MainActivity : ComponentActivity() {
 
                             OrderHistoryScreen(
                                 orders = customerOrders,
+                                feedback = feedback.filter { item ->
+                                    item.customerId == currentUserId
+                                },
+                                onLeaveFeedback = { order ->
+                                    feedbackOrder = order
+                                },
                                 onBack = {
                                     showingOrderHistory = false
                                 }
