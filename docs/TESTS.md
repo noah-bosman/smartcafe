@@ -14,3 +14,20 @@
 - Manual testing performed using the emulator
 - Firebase Authentication used as the authentication provider
 - Successful account creation verified in the Firebase Authentication Users view
+
+## CAFE-02 — Customer Login and Logout
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-02-01 | Submit login with email and password fields empty | Required field validation errors are displayed and no authentication attempt is made | Email and password validation errors were displayed | Pass |
+| T-CAFE-02-02 | Submit login using a valid registered email with an incorrect password | Authentication is rejected, an understandable error is displayed, and the customer remains on the login screen | Firebase rejected the credentials, an invalid email/password message was displayed, and the login screen remained visible | Pass |
+| T-CAFE-02-03 | Submit login using valid registered credentials | Authentication succeeds and the customer is shown the authenticated Customer screen | Firebase authentication succeeded and the Customer screen was displayed | Pass |
+| T-CAFE-02-04 | Close and reopen the application while authenticated | The existing Firebase session is recognised and the authenticated Customer screen is displayed | The authenticated session persisted and the Customer screen was displayed after relaunch | Pass |
+| T-CAFE-02-05 | Select Log out while authenticated | Firebase session ends and the customer returns to the login screen | The session ended and the login screen was displayed | Pass |
+| T-CAFE-02-06 | Close and reopen the application after logging out | No authenticated session exists and the login screen is displayed | The application opened on the login screen | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Firebase Authentication used for email/password authentication and session management
+- Invalid credentials do not provide access to the authenticated Customer screen
