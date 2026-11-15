@@ -19,6 +19,7 @@ import land.noah.smartcafe.ui.screens.CartScreen
 import land.noah.smartcafe.ui.screens.LoginScreen
 import land.noah.smartcafe.ui.screens.MenuScreen
 import land.noah.smartcafe.ui.screens.OrderConfirmationScreen
+import land.noah.smartcafe.ui.screens.OrderHistoryScreen
 import land.noah.smartcafe.ui.screens.ProductDetailScreen
 import land.noah.smartcafe.ui.theme.SmartCafeTheme
 
@@ -55,6 +56,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                 var showingCart by remember {
+                    mutableStateOf(false)
+                }
+
+                var showingOrderHistory by remember {
                     mutableStateOf(false)
                 }
 
@@ -205,6 +210,21 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        showingOrderHistory -> {
+                            val currentUserId = auth.currentUser?.uid
+
+                            val customerOrders = orders.filter { order ->
+                                order.customerId == currentUserId
+                            }
+
+                            OrderHistoryScreen(
+                                orders = customerOrders,
+                                onBack = {
+                                    showingOrderHistory = false
+                                }
+                            )
+                        }
+
                         else -> {
                             MenuScreen(
                                 menuItems = sampleMenu,
@@ -214,6 +234,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onCartClick = {
                                     showingCart = true
+                                },
+                                onOrdersClick = {
+                                    showingOrderHistory = true
                                 },
                                 onLogout = {
                                     auth.signOut()
