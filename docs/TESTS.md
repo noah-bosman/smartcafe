@@ -140,3 +140,19 @@
 - Product names and prices are copied into the order so the order does not depend on later menu changes
 - Orders are associated with Firebase users
 - The cart is cleared only after successful local order creation
+
+## CAFE-09 View Order History and Status
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-09-01 | Open Order History before placing an order | An empty-history message is displayed | `No previous orders` was displayed | Pass |
+| T-CAFE-09-02 | Place an order and open Order History | The placed order is displayed | The newly placed order appeared in Order History | Pass |
+| T-CAFE-09-03 | View a previous order | Order ID, item quantity, total and current status are displayed | The order displayed its ID, item count, total and `PENDING` status | Pass |
+| T-CAFE-09-04 | Place multiple orders | Orders are displayed with the newest order first | Newly placed orders were shown before older orders | Pass |
+| T-CAFE-09-05 | Open Order History while authenticated | Only orders associated with the current Firebase customer UID are selected for display | The order list was filtered using the authenticated customer's UID | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Order history displays orders associated with the current Firebase user
+- Orders are sorted newest order first
