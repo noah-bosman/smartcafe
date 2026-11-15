@@ -64,3 +64,22 @@
 - Manual testing performed using the emulator
 - Product details are supplied from the selected `MenuItem`
 - Product selection is represented using application UI state
+
+## CAFE-05 Search and Filter Menu
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-05-01 | Search for `lat` | Only menu items whose names match the search text are displayed | Latte was displayed and non-matching items were hidden | Pass |
+| T-CAFE-05-02 | Search using different letter case such as `CAP` | Search behaves case-insensitively | Cappuccino was displayed correctly | Pass |
+| T-CAFE-05-03 | Select the Coffee category | Only Coffee products are displayed | Cappuccino, Latte and Americano were displayed | Pass |
+| T-CAFE-05-04 | Select the Cake category | Only Cake products are displayed | Chocolate Cake and Carrot Cake were displayed | Pass |
+| T-CAFE-05-05 | Apply a search and category filter together | Only products matching both conditions are displayed | Combined filtering behaved correctly | Pass |
+| T-CAFE-05-06 | Apply filters that match no products | No unrelated products are displayed | The menu displayed no products for the unmatched criteria | Pass |
+| T-CAFE-05-07 | Clear the search and select All | The full café menu is restored | All six menu items were displayed again | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Search is performed against product names using a case-insensitive comparison
+- Category filtering supports All, Coffee, Tea and Cake
+- Search and category filtering can operate together

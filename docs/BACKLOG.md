@@ -80,7 +80,7 @@ As a customer, I want to view product details so that I can make an informed cho
 - Role: Customer  
 - Priority: Should  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 
