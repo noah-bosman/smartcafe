@@ -14,7 +14,7 @@
 - Role: Customer  
 - Priority: Must  
 - Owner: Noah  
-- Status: In Progress
+- Status: Done
 
 ### User Story
 
