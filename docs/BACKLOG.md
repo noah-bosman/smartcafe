@@ -129,7 +129,7 @@ submitting it.
 - Role: Customer  
 - Priority: Must  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 
