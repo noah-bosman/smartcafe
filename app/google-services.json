@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "297235765008",
+    "project_id": "uni-smartcafe",
+    "storage_bucket": "uni-smartcafe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:297235765008:android:438020e72b59c7c7407795",
+        "android_client_info": {
+          "package_name": "land.noah.smartcafe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzLVoIVL_sndAEbtWW9Gaxe42iK04EtVQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
