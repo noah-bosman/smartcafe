@@ -121,3 +121,22 @@
 - Subtotals are derived from product price * quantity
 - Increasing, decreasing and removing items updates Compose state
 - Decreasing an item from quantity 1 removes it from the cart
+
+## CAFE-08 Place Order and Show Confirmation
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-08-01 | Place an order containing Latte ×2 and Cappuccino ×1 | An order is created using the current cart contents | An order was created containing the expected products and quantities | Pass |
+| T-CAFE-08-02 | Place the order with a cart total of £10.00 | The created order stores the correct total | Order confirmation displayed a total of £10.00 | Pass |
+| T-CAFE-08-03 | Place an order while authenticated | The order is associated with the currently authenticated Firebase customer | The order was created using the current Firebase user UID | Pass |
+| T-CAFE-08-04 | Place a new order | The order begins with the Pending status | Confirmation displayed `PENDING` | Pass |
+| T-CAFE-08-05 | Complete order placement | An order confirmation screen is displayed | The confirmation screen displayed the order ID, item count, total and status | Pass |
+| T-CAFE-08-06 | Return to the menu after successful order placement | The shopping cart is cleared | Menu displayed `Cart: 0` | Pass |
+
+### Evidence 
+
+- Manual testing performed using the emulator
+- Cart contents are converted into independent `OrderItem` records when the order is placed
+- Product names and prices are copied into the order so the order does not depend on later menu changes
+- Orders are associated with Firebase users
+- The cart is cleared only after successful local order creation
