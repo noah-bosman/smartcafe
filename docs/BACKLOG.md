@@ -96,7 +96,7 @@ As a customer, I want to search and filter the menu so that I can find products 
 - Role: Customer  
 - Priority: Must  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 
