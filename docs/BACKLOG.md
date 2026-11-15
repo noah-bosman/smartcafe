@@ -111,7 +111,7 @@ As a customer, I want to add products to a cart so that I can prepare an order.
 - Role: Customer  
 - Priority: Must  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 

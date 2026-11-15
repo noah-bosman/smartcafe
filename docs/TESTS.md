@@ -101,3 +101,23 @@
 - Adding an existing product increases its quantity
 - Unavailable menu items are prevented from being added to the cart
 - The menu displays the total quantity of products currently in the cart
+
+## CAFE-07 Manage Shopping Cart
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-07-01 | Open the cart with no products added | Empty-cart state is displayed | `Your cart is empty` was displayed | Pass |
+| T-CAFE-07-02 | Add Latte twice and Cappuccino once, then open the cart | Both products are displayed with the correct quantities, subtotals and total | Latte ×2 and Cappuccino ×1 were displayed with a £10.00 total | Pass |
+| T-CAFE-07-03 | Increase Cappuccino quantity from 1 to 2 | Quantity, subtotal and cart total update correctly | Cappuccino changed to quantity 2, subtotal £6.40 and total £13.20 | Pass |
+| T-CAFE-07-04 | Decrease Latte quantity from 2 to 1 | Quantity, subtotal and cart total update correctly | Latte changed to quantity 1, subtotal £3.40 and total £9.80 | Pass |
+| T-CAFE-07-05 | Remove Cappuccino from the cart | Cappuccino is removed and the total is recalculated | Cappuccino was removed and the remaining total was £3.40 | Pass |
+| T-CAFE-07-06 | Decrease an item with quantity 1 | The item is removed instead of allowing quantity zero | Latte was removed and the cart became empty | Pass |
+| T-CAFE-07-07 | Return to the menu after emptying the cart | Menu cart indicator reflects the updated cart state | Cart indicator displayed `Cart: 0` | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Cart contents are represented as `CartItem` objects with quantity
+- Subtotals are derived from product price * quantity
+- Increasing, decreasing and removing items updates Compose state
+- Decreasing an item from quantity 1 removes it from the cart

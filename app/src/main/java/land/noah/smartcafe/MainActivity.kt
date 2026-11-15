@@ -12,6 +12,7 @@ import com.google.firebase.auth.FirebaseAuth
 import land.noah.smartcafe.data.sampleMenu
 import land.noah.smartcafe.model.CartItem
 import land.noah.smartcafe.model.MenuItem
+import land.noah.smartcafe.ui.screens.CartScreen
 import land.noah.smartcafe.ui.screens.LoginScreen
 import land.noah.smartcafe.ui.screens.MenuScreen
 import land.noah.smartcafe.ui.screens.ProductDetailScreen
@@ -64,36 +65,102 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                fun increaseCartQuantity(menuItemId: Int) {
+                    cartItems = cartItems.map { cartItem ->
+                        if (cartItem.menuItem.id == menuItemId) {
+                            cartItem.copy(
+                                quantity = cartItem.quantity + 1
+                            )
+                        } else {
+                            cartItem
+                        }
+                    }
+                }
+
+                fun decreaseCartQuantity(menuItemId: Int) {
+                    cartItems = cartItems.mapNotNull { cartItem ->
+                        if (cartItem.menuItem.id == menuItemId) {
+                            val newQuantity = cartItem.quantity - 1
+
+                            if (newQuantity <= 0) {
+                                null
+                            } else {
+                                cartItem.copy(
+                                    quantity = newQuantity
+                                )
+                            }
+                        } else {
+                            cartItem
+                        }
+                    }
+                }
+
+                fun removeFromCart(menuItemId: Int) {
+                    cartItems = cartItems.filterNot { cartItem ->
+                        cartItem.menuItem.id == menuItemId
+                    }
+                }
+
                 val cartItemCount = cartItems.sumOf { cartItem ->
                     cartItem.quantity
+                }
+
+                var showingCart by remember {
+                    mutableStateOf(false)
                 }
 
                 if (isLoggedIn) {
                     val selectedItem = selectedMenuItem
 
-                    if (selectedItem != null) {
-                        ProductDetailScreen(
-                            item = selectedItem,
-                            onBack = {
-                                selectedMenuItem = null
-                            },
-                            onAddToCart = { item ->
-                                addToCart(item)
-                            }
-                        )
-                    } else {
-                        MenuScreen(
-                            menuItems = sampleMenu,
-                            onItemClick = { item ->
-                                selectedMenuItem = item
-                            },
-                            onLogout = {
-                                auth.signOut()
-                                selectedMenuItem = null
-                                isLoggedIn = false
-                            },
-                            cartItemCount = cartItemCount
-                        )
+                    when {
+                        selectedItem != null -> {
+                            ProductDetailScreen(
+                                item = selectedItem,
+                                onBack = {
+                                    selectedMenuItem = null
+                                },
+                                onAddToCart = { item ->
+                                    addToCart(item)
+                                }
+                            )
+                        }
+
+                        showingCart -> {
+                            CartScreen(
+                                cartItems = cartItems,
+                                onIncreaseQuantity = { menuItemId ->
+                                    increaseCartQuantity(menuItemId)
+                                },
+                                onDecreaseQuantity = { menuItemId ->
+                                    decreaseCartQuantity(menuItemId)
+                                },
+                                onRemoveItem = { menuItemId ->
+                                    removeFromCart(menuItemId)
+                                },
+                                onBack = {
+                                    showingCart = false
+                                }
+                            )
+                        }
+
+                        else -> {
+                            MenuScreen(
+                                menuItems = sampleMenu,
+                                cartItemCount = cartItemCount,
+                                onItemClick = { item ->
+                                    selectedMenuItem = item
+                                },
+                                onCartClick = {
+                                    showingCart = true
+                                },
+                                onLogout = {
+                                    auth.signOut()
+                                    selectedMenuItem = null
+                                    showingCart = false
+                                    isLoggedIn = false
+                                }
+                            )
+                        }
                     }
                 } else {
                     LoginScreen(
