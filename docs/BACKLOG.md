@@ -65,7 +65,7 @@ As a customer, I want to browse the cafe menu so that I can decide what to order
 - Role: Customer  
 - Priority: Must  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 
@@ -74,6 +74,7 @@ As a customer, I want to view product details so that I can make an informed cho
 ### Acceptance Criteria
 
 - Each product displays its name, description, price and availability.
+
 ## CAFE-05 Search and Filter Menu
 
 - Role: Customer  

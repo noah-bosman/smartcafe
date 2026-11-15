@@ -9,7 +9,7 @@
 | T-CAFE-01-03 | Register using a valid unused email and matching valid password | Firebase creates the account and the application displays confirmation | Account creation succeeded and the application displayed a success message | Pass |
 | T-CAFE-01-04 | Register again using an email already registered in Firebase | Registration is rejected and an understandable duplicate-account error is displayed | Registration was rejected and the application displayed that an account already exists with the email | Pass |
 
-## Evidence
+### Evidence
 
 - Manual testing performed using the emulator
 - Firebase Authentication used as the authentication provider
@@ -48,3 +48,19 @@
 - Manual testing performed using the emulator
 - Menu data currently comes from the in-memory `sampleMenu` data source!
 - Each menu item has a stable ID, name, description, category, price and availability state
+
+## CAFE-04 View Product Information
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-04-01 | Select an available product from the menu | A product detail screen opens for the selected product | The selected product detail screen was displayed | Pass |
+| T-CAFE-04-02 | View Cappuccino product details | Name, category, description, price and availability are displayed correctly | Cappuccino details displayed correctly, including £3.20 and Available status | Pass |
+| T-CAFE-04-03 | View an unavailable product | Product information remains visible and the unavailable state is clearly displayed | Carrot Cake details displayed correctly with Unavailable status | Pass |
+| T-CAFE-04-04 | Select Back from the product detail screen | The customer returns to the café menu | The menu screen was displayed again | Pass |
+| T-CAFE-04-05 | Open different products consecutively | The detail screen displays information for the product that was selected | Each selected product displayed its corresponding information | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Product details are supplied from the selected `MenuItem`
+- Product selection is represented using application UI state
