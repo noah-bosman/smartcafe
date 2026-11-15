@@ -1,5 +1,6 @@
 package land.noah.smartcafe.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import land.noah.smartcafe.model.MenuItem
 @Composable
 fun MenuScreen(
     menuItems: List<MenuItem>,
+    onItemClick: (MenuItem) -> Unit,
     onLogout: () -> Unit
 ) {
     Column(
@@ -55,7 +57,12 @@ fun MenuScreen(
                 items = menuItems,
                 key = { item -> item.id }
             ) { item ->
-                MenuItemCard(item)
+                MenuItemCard(
+                    item = item,
+                    onClick = {
+                        onItemClick(item)
+                    }
+                )
             }
         }
     }
@@ -63,10 +70,11 @@ fun MenuScreen(
 
 @Composable
 private fun MenuItemCard(
-    item: MenuItem
+    item: MenuItem,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
