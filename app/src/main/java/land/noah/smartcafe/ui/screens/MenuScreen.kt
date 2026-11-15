@@ -1,0 +1,88 @@
+package land.noah.smartcafe.ui.screens
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import land.noah.smartcafe.model.MenuItem
+
+@Composable
+fun MenuScreen(
+    menuItems: List<MenuItem>,
+    onLogout: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                start = 24.dp,
+                end = 24.dp,
+                top = 48.dp
+            )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Smart Café")
+
+            TextButton(
+                onClick = onLogout
+            ) {
+                Text("Log out")
+            }
+        }
+
+        Text(
+            text = "Menu",
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(
+                items = menuItems,
+                key = { item -> item.id }
+            ) { item ->
+                MenuItemCard(item)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MenuItemCard(
+    item: MenuItem
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(item.name)
+            Text(item.category)
+            Text("£%.2f".format(item.price))
+
+            Text(
+                if (item.available) {
+                    "Available"
+                } else {
+                    "Unavailable"
+                }
+            )
+        }
+    }
+}

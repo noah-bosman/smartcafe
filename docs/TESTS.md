@@ -15,7 +15,7 @@
 - Firebase Authentication used as the authentication provider
 - Successful account creation verified in the Firebase Authentication Users view
 
-## CAFE-02 — Customer Login and Logout
+## CAFE-02 Customer Login and Logout
 
 | Test ID | Test | Expected Result | Actual Result | Status |
 |---|---|---|---|---|
@@ -31,3 +31,20 @@
 - Manual testing performed using the emulator
 - Firebase Authentication used for email/password authentication and session management
 - Invalid credentials do not provide access to the authenticated Customer screen
+
+## CAFE-03 Browse Cafe Menu
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-03-01 | Log in and open the Customer application | The café menu is displayed | The menu screen was displayed after successful login | Pass |
+| T-CAFE-03-02 | View the available menu items | All configured café products are displayed | All six configured products were displayed | Pass |
+| T-CAFE-03-03 | Scroll through the menu | The customer can browse all menu items | The menu scrolled correctly and all items were accessible | Pass |
+| T-CAFE-03-04 | View an available product | The product displays its name, category, price and available status | The configured product information and Available status were displayed | Pass |
+| T-CAFE-03-05 | View an unavailable product | The product remains visible but is clearly marked unavailable | Carrot Cake was displayed with an Unavailable status | Pass |
+| T-CAFE-03-06 | Select Log out from the menu screen | The authenticated session ends and the login screen is displayed | Logout succeeded and the login screen was displayed | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Menu data currently comes from the in-memory `sampleMenu` data source!
+- Each menu item has a stable ID, name, description, category, price and availability state

@@ -9,8 +9,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
-import land.noah.smartcafe.ui.screens.CustomerHomeScreen
+import land.noah.smartcafe.data.sampleMenu
 import land.noah.smartcafe.ui.screens.LoginScreen
+import land.noah.smartcafe.ui.screens.MenuScreen
 import land.noah.smartcafe.ui.theme.SmartCafeTheme
 
 class MainActivity : ComponentActivity() {
@@ -26,7 +27,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (isLoggedIn) {
-                    CustomerHomeScreen(
+                    MenuScreen(
+                        menuItems = sampleMenu,
                         onLogout = {
                             auth.signOut()
                             isLoggedIn = false
