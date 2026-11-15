@@ -2,7 +2,7 @@ package land.noah.smartcafe.data
 
 import land.noah.smartcafe.model.MenuItem
 
-val sampleMenu = listOf( 
+val sampleMenu = listOf(
     MenuItem(
         id = 1,
         name = "Cappuccino",
