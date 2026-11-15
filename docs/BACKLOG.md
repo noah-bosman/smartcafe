@@ -163,7 +163,7 @@ order.
 - Role: Customer  
 - Priority: Should  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 
