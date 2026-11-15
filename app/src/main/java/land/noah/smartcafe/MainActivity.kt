@@ -65,6 +65,42 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                fun increaseCartQuantity(menuItemId: Int) {
+                    cartItems = cartItems.map { cartItem ->
+                        if (cartItem.menuItem.id == menuItemId) {
+                            cartItem.copy(
+                                quantity = cartItem.quantity + 1
+                            )
+                        } else {
+                            cartItem
+                        }
+                    }
+                }
+
+                fun decreaseCartQuantity(menuItemId: Int) {
+                    cartItems = cartItems.mapNotNull { cartItem ->
+                        if (cartItem.menuItem.id == menuItemId) {
+                            val newQuantity = cartItem.quantity - 1
+
+                            if (newQuantity <= 0) {
+                                null
+                            } else {
+                                cartItem.copy(
+                                    quantity = newQuantity
+                                )
+                            }
+                        } else {
+                            cartItem
+                        }
+                    }
+                }
+
+                fun removeFromCart(menuItemId: Int) {
+                    cartItems = cartItems.filterNot { cartItem ->
+                        cartItem.menuItem.id == menuItemId
+                    }
+                }
+
                 val cartItemCount = cartItems.sumOf { cartItem ->
                     cartItem.quantity
                 }
@@ -92,6 +128,15 @@ class MainActivity : ComponentActivity() {
                         showingCart -> {
                             CartScreen(
                                 cartItems = cartItems,
+                                onIncreaseQuantity = { menuItemId ->
+                                    increaseCartQuantity(menuItemId)
+                                },
+                                onDecreaseQuantity = { menuItemId ->
+                                    decreaseCartQuantity(menuItemId)
+                                },
+                                onRemoveItem = { menuItemId ->
+                                    removeFromCart(menuItemId)
+                                },
                                 onBack = {
                                     showingCart = false
                                 }

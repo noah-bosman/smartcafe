@@ -2,6 +2,7 @@ package land.noah.smartcafe.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,9 @@ import land.noah.smartcafe.model.CartItem
 @Composable
 fun CartScreen(
     cartItems: List<CartItem>,
+    onIncreaseQuantity: (Int) -> Unit,
+    onDecreaseQuantity: (Int) -> Unit,
+    onRemoveItem: (Int) -> Unit,
     onBack: () -> Unit
 ) {
     val total = cartItems.sumOf { cartItem ->
@@ -53,7 +57,12 @@ fun CartScreen(
                     items = cartItems,
                     key = { cartItem -> cartItem.menuItem.id }
                 ) { cartItem ->
-                    CartItemCard(cartItem)
+                    CartItemCard(
+                        cartItem = cartItem,
+                        onIncreaseQuantity = onIncreaseQuantity,
+                        onDecreaseQuantity = onDecreaseQuantity,
+                        onRemoveItem = onRemoveItem
+                    )
                 }
             }
 
@@ -66,7 +75,10 @@ fun CartScreen(
 
 @Composable
 private fun CartItemCard(
-    cartItem: CartItem
+    cartItem: CartItem,
+    onIncreaseQuantity: (Int) -> Unit,
+    onDecreaseQuantity: (Int) -> Unit,
+    onRemoveItem: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -79,6 +91,34 @@ private fun CartItemCard(
             Text("Quantity: ${cartItem.quantity}")
             Text("£%.2f each".format(cartItem.menuItem.price))
             Text("Subtotal: £%.2f".format(cartItem.subtotal))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        onDecreaseQuantity(cartItem.menuItem.id)
+                    }
+                ) {
+                    Text("-")
+                }
+
+                TextButton(
+                    onClick = {
+                        onIncreaseQuantity(cartItem.menuItem.id)
+                    }
+                ) {
+                    Text("+")
+                }
+
+                TextButton(
+                    onClick = {
+                        onRemoveItem(cartItem.menuItem.id)
+                    }
+                ) {
+                    Text("Remove")
+                }
+            }
         }
     }
 }
