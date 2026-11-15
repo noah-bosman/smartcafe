@@ -10,9 +10,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import land.noah.smartcafe.model.MenuItem
@@ -23,6 +28,17 @@ fun MenuScreen(
     onItemClick: (MenuItem) -> Unit,
     onLogout: () -> Unit
 ) {
+    var searchQuery by remember {
+        mutableStateOf("")
+    }
+
+    val filteredItems = menuItems.filter { item ->
+        item.name.contains(
+            searchQuery,
+            ignoreCase = true
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -50,11 +66,25 @@ fun MenuScreen(
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { newValue ->
+                searchQuery = newValue
+            },
+            label = {
+                Text("Search menu")
+            },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        )
+
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(
-                items = menuItems,
+                items = filteredItems,
                 key = { item -> item.id }
             ) { item ->
                 MenuItemCard(
