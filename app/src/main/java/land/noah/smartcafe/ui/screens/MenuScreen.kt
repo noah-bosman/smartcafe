@@ -26,7 +26,8 @@ import land.noah.smartcafe.model.MenuItem
 fun MenuScreen(
     menuItems: List<MenuItem>,
     onItemClick: (MenuItem) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    cartItemCount: Int,
 ) {
     var searchQuery by remember {
         mutableStateOf("")
@@ -71,6 +72,8 @@ fun MenuScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Smart Café")
+
+            Text("Cart: $cartItemCount")
 
             TextButton(
                 onClick = onLogout
