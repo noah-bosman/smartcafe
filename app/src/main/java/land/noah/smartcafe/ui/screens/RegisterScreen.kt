@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 
 @Composable
 fun RegisterScreen() {
@@ -29,6 +31,12 @@ fun RegisterScreen() {
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val auth = FirebaseAuth.getInstance()
+
+    var registrationError by rememberSaveable { mutableStateOf<String?>(null) }
+    var registrationSuccess by rememberSaveable { mutableStateOf(false) }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -118,10 +126,48 @@ fun RegisterScreen() {
                     confirmPassword != password -> "Passwords do not match"
                     else -> null
                 }
+
+                val formIsValid =
+                    emailError == null &&
+                            passwordError == null &&
+                            confirmPasswordError == null
+
+                if (formIsValid) {
+                    registrationError = null
+                    isLoading = true
+
+                    auth.createUserWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+
+                            if (task.isSuccessful) {
+                                registrationSuccess = true
+                            } else {
+                                registrationError = when (task.exception) {
+                                    is FirebaseAuthUserCollisionException ->
+                                        "An account already exists with this email"
+
+                                    else ->
+                                        "Account creation failed. Please try again."
+                                }
+                            }
+                        }
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Create account")
+            Text(
+                if (isLoading) "Creating account..."
+                else "Create account"
+            )
+        }
+
+        registrationError?.let {
+            Text(it)
+        }
+
+        if (registrationSuccess) {
+            Text("Account created successfully")
         }
     }
 }
