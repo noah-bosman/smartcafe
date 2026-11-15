@@ -29,6 +29,7 @@ fun MenuScreen(
     onLogout: () -> Unit,
     cartItemCount: Int,
     onCartClick: () -> Unit,
+    onOrdersClick: () -> Unit,
 ) {
     var searchQuery by remember {
         mutableStateOf("")
@@ -78,6 +79,12 @@ fun MenuScreen(
                 onClick = onCartClick
             ) {
                 Text("Cart: $cartItemCount")
+            }
+
+            TextButton(
+                onClick = onOrdersClick
+            ) {
+                Text("Orders")
             }
 
             TextButton(
