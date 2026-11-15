@@ -32,11 +32,29 @@ fun MenuScreen(
         mutableStateOf("")
     }
 
+    var selectedCategory by remember {
+        mutableStateOf("All")
+    }
+
+    val categories = listOf(
+        "All",
+        "Coffee",
+        "Tea",
+        "Cake"
+    )
+
     val filteredItems = menuItems.filter { item ->
-        item.name.contains(
-            searchQuery,
-            ignoreCase = true
-        )
+        val matchesSearch =
+            item.name.contains(
+                searchQuery,
+                ignoreCase = true
+            )
+
+        val matchesCategory =
+            selectedCategory == "All" ||
+                    item.category == selectedCategory
+
+        matchesSearch && matchesCategory
     }
 
     Column(
@@ -79,6 +97,29 @@ fun MenuScreen(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            categories.forEach { category ->
+                TextButton(
+                    onClick = {
+                        selectedCategory = category
+                    }
+                ) {
+                    Text(
+                        if (selectedCategory == category) {
+                            "[$category]" // TODO better indicator?
+                        } else {
+                            category
+                        }
+                    )
+                }
+            }
+        }
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
