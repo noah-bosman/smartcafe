@@ -13,11 +13,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import land.noah.smartcafe.model.Feedback
 import land.noah.smartcafe.model.Order
 
 @Composable
 fun OrderHistoryScreen(
     orders: List<Order>,
+    feedback: List<Feedback>,
+    onLeaveFeedback: (Order) -> Unit,
     onBack: () -> Unit
 ) {
     Column(
@@ -52,7 +55,17 @@ fun OrderHistoryScreen(
                         order.id
                     }
                 ) { order ->
-                    OrderHistoryCard(order)
+                    val orderFeedback = feedback.find { item ->
+                        item.orderId == order.id
+                    }
+
+                    OrderHistoryCard(
+                        order = order,
+                        feedback = orderFeedback,
+                        onLeaveFeedback = {
+                            onLeaveFeedback(order)
+                        }
+                    )
                 }
             }
         }
@@ -61,7 +74,9 @@ fun OrderHistoryScreen(
 
 @Composable
 private fun OrderHistoryCard(
-    order: Order
+    order: Order,
+    feedback: Feedback?,
+    onLeaveFeedback: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -81,6 +96,20 @@ private fun OrderHistoryCard(
             Text("Total: £%.2f".format(order.total))
 
             Text("Status: ${order.status}")
+        }
+
+        if (feedback != null) {
+            Text("Rating: ${feedback.rating}/5")
+
+            if (feedback.comment.isNotBlank()) {
+                Text("Feedback: ${feedback.comment}")
+            }
+        }
+
+        TextButton(
+            onClick = onLeaveFeedback
+        ) {
+            Text("Leave feedback")
         }
     }
 }

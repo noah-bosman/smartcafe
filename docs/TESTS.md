@@ -156,3 +156,20 @@
 - Manual testing performed using the emulator
 - Order history displays orders associated with the current Firebase user
 - Orders are sorted newest order first
+
+## CAFE-10 Submit Feedback and Ratings
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-10-01 | Open feedback for a previous order without selecting a rating | Submit control remains disabled | Submit button remained disabled until a rating was selected | Pass |
+| T-CAFE-10-02 | Select a rating from 1 to 5 | Selected rating is visibly indicated | The selected rating was highlighted correctly | Pass |
+| T-CAFE-10-03 | Submit a rating with an optional written comment | Feedback is stored and associated with the selected order | Rating and comment were stored against the selected order | Pass |
+| T-CAFE-10-04 | Return to Order History after submitting feedback | Stored feedback is displayed with the order | The submitted rating and comment were displayed in Order History | Pass |
+| T-CAFE-10-05 | Edit feedback for an order that already has feedback | Existing feedback is replaced instead of duplicated | The previous feedback was replaced by the new submission | Pass |
+| T-CAFE-10-06 | Submit feedback while authenticated | Feedback is associated with the authenticated Firebase customer | Feedback was stored using the current Firebase user UID | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Feedback is linked to both an order ID and the customer
+- Ratings are validated to the range 1–5
