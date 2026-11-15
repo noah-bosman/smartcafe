@@ -50,7 +50,7 @@ As a customer, I want to log in to my account so that I can access my orders and
 - Role: Customer  
 - Priority: Must  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 
