@@ -12,9 +12,13 @@ import com.google.firebase.auth.FirebaseAuth
 import land.noah.smartcafe.data.sampleMenu
 import land.noah.smartcafe.model.CartItem
 import land.noah.smartcafe.model.MenuItem
+import land.noah.smartcafe.model.Order
+import land.noah.smartcafe.model.OrderItem
+import land.noah.smartcafe.model.OrderStatus
 import land.noah.smartcafe.ui.screens.CartScreen
 import land.noah.smartcafe.ui.screens.LoginScreen
 import land.noah.smartcafe.ui.screens.MenuScreen
+import land.noah.smartcafe.ui.screens.OrderConfirmationScreen
 import land.noah.smartcafe.ui.screens.ProductDetailScreen
 import land.noah.smartcafe.ui.theme.SmartCafeTheme
 
@@ -36,6 +40,22 @@ class MainActivity : ComponentActivity() {
 
                 var cartItems by remember {
                     mutableStateOf<List<CartItem>>(emptyList())
+                }
+
+                var orders by remember {
+                    mutableStateOf<List<Order>>(emptyList())
+                }
+
+                var lastPlacedOrder by remember {
+                    mutableStateOf<Order?>(null)
+                }
+
+                val cartItemCount = cartItems.sumOf { cartItem ->
+                    cartItem.quantity
+                }
+
+                var showingCart by remember {
+                    mutableStateOf(false)
                 }
 
                 fun addToCart(menuItem: MenuItem) {
@@ -101,18 +121,57 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val cartItemCount = cartItems.sumOf { cartItem ->
-                    cartItem.quantity
-                }
+                fun placeOrder() {
+                    if (cartItems.isEmpty()) {
+                        return
+                    }
 
-                var showingCart by remember {
-                    mutableStateOf(false)
+                    val currentUser = auth.currentUser ?: return
+
+                    val createdAt = System.currentTimeMillis()
+
+                    val orderItems = cartItems.map { cartItem ->
+                        OrderItem(
+                            menuItemId = cartItem.menuItem.id,
+                            name = cartItem.menuItem.name,
+                            price = cartItem.menuItem.price,
+                            quantity = cartItem.quantity
+                        )
+                    }
+
+                    val total = orderItems.sumOf { orderItem ->
+                        orderItem.subtotal
+                    }
+
+                    val order = Order(
+                        id = createdAt,
+                        customerId = currentUser.uid,
+                        items = orderItems,
+                        total = total,
+                        status = OrderStatus.PENDING,
+                        createdAt = createdAt
+                    )
+
+                    orders = orders + order
+                    lastPlacedOrder = order
+                    cartItems = emptyList()
+                    showingCart = false
                 }
 
                 if (isLoggedIn) {
                     val selectedItem = selectedMenuItem
+                    val confirmedOrder = lastPlacedOrder
 
                     when {
+                        confirmedOrder != null -> {
+                            OrderConfirmationScreen(
+                                order = confirmedOrder,
+                                onContinue = {
+                                    lastPlacedOrder = null
+                                }
+                            )
+                        }
+
                         selectedItem != null -> {
                             ProductDetailScreen(
                                 item = selectedItem,
@@ -136,6 +195,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onRemoveItem = { menuItemId ->
                                     removeFromCart(menuItemId)
+                                },
+                                onPlaceOrder = {
+                                    placeOrder()
                                 },
                                 onBack = {
                                     showingCart = false

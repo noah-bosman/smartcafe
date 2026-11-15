@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,6 +23,7 @@ fun CartScreen(
     onIncreaseQuantity: (Int) -> Unit,
     onDecreaseQuantity: (Int) -> Unit,
     onRemoveItem: (Int) -> Unit,
+    onPlaceOrder: () -> Unit,
     onBack: () -> Unit
 ) {
     val total = cartItems.sumOf { cartItem ->
@@ -69,6 +71,13 @@ fun CartScreen(
             Text(
                 "Total: £%.2f".format(total)
             )
+
+            Button(
+                onClick = onPlaceOrder,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Place order")
+            }
         }
     }
 }
