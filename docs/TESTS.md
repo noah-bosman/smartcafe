@@ -83,3 +83,21 @@
 - Search is performed against product names using a case-insensitive comparison
 - Category filtering supports All, Coffee, Tea and Cake
 - Search and category filtering can operate together
+
+## CAFE-06 Add Products to Cart
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-06-01 | Add an available Latte to the cart once | Cart quantity increases by one | Cart count changed to 1 | Pass |
+| T-CAFE-06-02 | Add the same Latte to the cart again | Existing cart item quantity increases rather than creating a duplicate entry | Cart count changed to 2 | Pass |
+| T-CAFE-06-03 | Add a different available product | New product is added and total cart quantity increases | Cappuccino was added and cart count changed to 3 | Pass |
+| T-CAFE-06-04 | Open an unavailable product | Customer cannot add the unavailable product to the cart | Carrot Cake displayed a disabled add-to-cart control | Pass |
+| T-CAFE-06-05 | Navigate between menu and product detail screens after adding products | Cart state remains available during normal application navigation | Cart count remained unchanged while navigating between screens | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Cart state is stored in application memory using a list of `CartItem` objects
+- Adding an existing product increases its quantity
+- Unavailable menu items are prevented from being added to the cart
+- The menu displays the total quantity of products currently in the cart
