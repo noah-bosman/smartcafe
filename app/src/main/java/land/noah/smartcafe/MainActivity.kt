@@ -26,13 +26,11 @@ import kotlinx.coroutines.launch
 import land.noah.smartcafe.data.CafeRepository
 import land.noah.smartcafe.data.local.CafeDatabase
 import land.noah.smartcafe.data.sampleMenu
-import land.noah.smartcafe.model.Feedback
 import land.noah.smartcafe.model.MenuItem
 import land.noah.smartcafe.model.Order
-import land.noah.smartcafe.model.OrderAnalytics
-import land.noah.smartcafe.model.OrderItem
 import land.noah.smartcafe.model.OrderStatus
 import land.noah.smartcafe.ui.SmartCafeViewModel
+import land.noah.smartcafe.ui.SmartCafeViewModelFactory
 import land.noah.smartcafe.ui.screens.AnalyticsScreen
 import land.noah.smartcafe.ui.screens.CartScreen
 import land.noah.smartcafe.ui.screens.FeedbackScreen
@@ -145,7 +143,9 @@ class MainActivity : ComponentActivity() {
             SmartCafeTheme {
                 val auth = FirebaseAuth.getInstance()
 
-                val cafeViewModel: SmartCafeViewModel = viewModel()
+                val cafeViewModel: SmartCafeViewModel = viewModel(
+                    factory = SmartCafeViewModelFactory(repository)
+                )
 
                 var isLoggedIn by remember {
                     mutableStateOf(auth.currentUser != null)
@@ -155,24 +155,12 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<MenuItem?>(null)
                 }
 
-                var orders by remember {
-                    mutableStateOf<List<Order>>(emptyList())
-                }
-
-                var feedback by remember {
-                    mutableStateOf<List<Feedback>>(emptyList())
-                }
-
                 LaunchedEffect(isLoggedIn) {
                     if (isLoggedIn) {
                         val currentUser = auth.currentUser
 
                         if (currentUser != null) {
-                            orders = repository.getOrdersForCustomer(
-                                currentUser.uid
-                            )
-
-                            feedback = repository.getFeedbackForCustomer(
+                            cafeViewModel.loadCustomerData(
                                 currentUser.uid
                             )
                         }
@@ -205,162 +193,41 @@ class MainActivity : ComponentActivity() {
 
                 val coroutineScope = rememberCoroutineScope()
 
-                fun updateOrderStatus(
-                    orderId: Long,
-                    newStatus: OrderStatus
-                ) {
-                    orders = orders.map { order ->
-                        if (order.id == orderId) {
-                            order.copy(
-                                status = newStatus
-                            )
-                        } else {
-                            order
-                        }
-                    }
-
-                    coroutineScope.launch {
-                        repository.updateOrderStatus(
-                            orderId = orderId,
-                            status = newStatus
-                        )
-                    }
-
-                    showOrderStatusNotification(
-                        orderId = orderId,
-                        status = newStatus
-                    )
-                }
-
-                fun submitFeedback(
-                    orderId: Long,
-                    rating: Int,
-                    comment: String
-                ) {
-                    val currentUser = auth.currentUser ?: return
-
-                    if (rating !in 1..5) {
-                        return
-                    }
-
-                    val newFeedback = Feedback(
-                        orderId = orderId,
-                        customerId = currentUser.uid,
-                        rating = rating,
-                        comment = comment.trim(),
-                        createdAt = System.currentTimeMillis()
-                    )
-
-                    feedback = feedback
-                        .filterNot { existingFeedback ->
-                            existingFeedback.orderId == orderId &&
-                                    existingFeedback.customerId == currentUser.uid
-                        } + newFeedback
-
-                    coroutineScope.launch {
-                        repository.saveFeedback(newFeedback)
-                    }
-                }
-
                 fun placeOrder() {
-                    if (cafeViewModel.cartItems.isEmpty()) {
-                        return
-                    }
-
                     val currentUser = auth.currentUser ?: return
 
-                    val createdAt = System.currentTimeMillis()
+                    val order = cafeViewModel.placeOrder(
+                        customerId = currentUser.uid
+                    ) ?: return
 
-                    val orderItems = cafeViewModel.cartItems.map { cartItem ->
-                        OrderItem(
-                            menuItemId = cartItem.menuItem.id,
-                            name = cartItem.menuItem.name,
-                            price = cartItem.menuItem.price,
-                            quantity = cartItem.quantity
-                        )
-                    }
-
-                    val total = orderItems.sumOf { orderItem ->
-                        orderItem.subtotal
-                    }
-
-                    val order = Order(
-                        id = createdAt,
-                        customerId = currentUser.uid,
-                        items = orderItems,
-                        total = total,
-                        status = OrderStatus.PENDING,
-                        createdAt = createdAt
-                    )
-
-                    orders = orders + order
                     lastPlacedOrder = order
-                    cafeViewModel.cartItems = emptyList()
                     showingCart = false
 
                     coroutineScope.launch {
-                        repository.saveOrder(order)
-                    }
-
-                    // simulate order statuses
-                    coroutineScope.launch {
                         delay(5_000.milliseconds)
 
-                        updateOrderStatus(
+                        cafeViewModel.updateOrderStatus(
                             orderId = order.id,
                             newStatus = OrderStatus.PREPARING
                         )
 
+                        showOrderStatusNotification(
+                            orderId = order.id,
+                            status = OrderStatus.PREPARING
+                        )
+
                         delay(5_000.milliseconds)
 
-                        updateOrderStatus(
+                        cafeViewModel.updateOrderStatus(
                             orderId = order.id,
                             newStatus = OrderStatus.READY_FOR_COLLECTION
                         )
+
+                        showOrderStatusNotification(
+                            orderId = order.id,
+                            status = OrderStatus.READY_FOR_COLLECTION
+                        )
                     }
-                }
-
-                fun calculateOrderAnalytics(
-                    orders: List<Order>
-                ): OrderAnalytics {
-                    val totalOrders = orders.size
-
-                    val totalSpend = orders.sumOf { order ->
-                        order.total
-                    }
-
-                    val averageOrderValue =
-                        if (totalOrders == 0) {
-                            0.0
-                        } else {
-                            totalSpend / totalOrders
-                        }
-
-                    val productQuantities = orders
-                        .flatMap { order ->
-                            order.items
-                        }
-                        .groupBy { item ->
-                            item.name
-                        }
-                        .mapValues { (_, items) ->
-                            items.sumOf { item ->
-                                item.quantity
-                            }
-                        }
-
-                    val mostOrderedProduct = productQuantities
-                        .maxByOrNull { (_, quantity) ->
-                            quantity
-                        }
-                        ?.key
-
-                    return OrderAnalytics(
-                        totalOrders = totalOrders,
-                        totalSpend = totalSpend,
-                        averageOrderValue = averageOrderValue,
-                        mostOrderedProduct = mostOrderedProduct
-                    )
                 }
 
                 if (isLoggedIn) {
@@ -395,11 +262,16 @@ class MainActivity : ComponentActivity() {
                             FeedbackScreen(
                                 order = order,
                                 onSubmit = { rating, comment ->
-                                    submitFeedback(
-                                        orderId = order.id,
-                                        rating = rating,
-                                        comment = comment
-                                    )
+                                    val currentUserId = auth.currentUser?.uid
+
+                                    if (currentUserId != null) {
+                                        cafeViewModel.submitFeedback(
+                                            customerId = currentUserId,
+                                            orderId = order.id,
+                                            rating = rating,
+                                            comment = comment
+                                        )
+                                    }
 
                                     feedbackOrder = null
                                 },
@@ -433,13 +305,13 @@ class MainActivity : ComponentActivity() {
                         showingOrderHistory -> {
                             val currentUserId = auth.currentUser?.uid
 
-                            val customerOrders = orders.filter { order ->
+                            val customerOrders = cafeViewModel.orders.filter { order ->
                                 order.customerId == currentUserId
                             }
 
                             OrderHistoryScreen(
                                 orders = customerOrders,
-                                feedback = feedback.filter { item ->
+                                feedback = cafeViewModel.feedback.filter { item ->
                                     item.customerId == currentUserId
                                 },
                                 onLeaveFeedback = { order ->
@@ -454,18 +326,16 @@ class MainActivity : ComponentActivity() {
                         showingAnalytics -> {
                             val currentUserId = auth.currentUser?.uid
 
-                            val customerOrders = orders.filter { order ->
-                                order.customerId == currentUserId
+                            if (currentUserId != null) {
+                                AnalyticsScreen(
+                                    analytics = cafeViewModel.calculateOrderAnalytics(
+                                        currentUserId
+                                    ),
+                                    onBack = {
+                                        showingAnalytics = false
+                                    }
+                                )
                             }
-
-                            val analytics = calculateOrderAnalytics(customerOrders)
-
-                            AnalyticsScreen(
-                                analytics = analytics,
-                                onBack = {
-                                    showingAnalytics = false
-                                }
-                            )
                         }
 
                         else -> {
