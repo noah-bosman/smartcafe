@@ -155,6 +155,10 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<List<Order>>(emptyList())
                 }
 
+                var feedback by remember {
+                    mutableStateOf<List<Feedback>>(emptyList())
+                }
+
                 LaunchedEffect(isLoggedIn) {
                     if (isLoggedIn) {
                         val currentUser = auth.currentUser
@@ -187,6 +191,20 @@ class MainActivity : ComponentActivity() {
                                     createdAt = storedOrder.order.createdAt
                                 )
                             }
+
+                            val storedFeedback =
+                                database.feedbackDao()
+                                    .getFeedbackForCustomer(currentUser.uid)
+
+                            feedback = storedFeedback.map { item ->
+                                Feedback(
+                                    orderId = item.orderId,
+                                    customerId = item.customerId,
+                                    rating = item.rating,
+                                    comment = item.comment,
+                                    createdAt = item.createdAt
+                                )
+                            }
                         }
                     }
                 }
@@ -205,10 +223,6 @@ class MainActivity : ComponentActivity() {
 
                 var showingOrderHistory by remember {
                     mutableStateOf(false)
-                }
-
-                var feedback by remember {
-                    mutableStateOf<List<Feedback>>(emptyList())
                 }
 
                 var feedbackOrder by remember {
