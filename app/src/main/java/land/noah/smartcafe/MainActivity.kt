@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -151,6 +152,42 @@ class MainActivity : ComponentActivity() {
 
                 var orders by remember {
                     mutableStateOf<List<Order>>(emptyList())
+                }
+
+                LaunchedEffect(isLoggedIn) {
+                    if (isLoggedIn) {
+                        val currentUser = auth.currentUser
+
+                        if (currentUser != null) {
+                            val storedOrders =
+                                database.orderDao()
+                                    .getOrdersForCustomer(currentUser.uid)
+
+                            orders = storedOrders.map { storedOrder ->
+                                Order(
+                                    id = storedOrder.order.id,
+                                    customerId = storedOrder.order.customerId,
+                                    items = storedOrder.items.map { item ->
+                                        OrderItem(
+                                            menuItemId = item.menuItemId,
+                                            name = item.name,
+                                            price = item.price,
+                                            quantity = item.quantity
+                                        )
+                                    },
+                                    total = storedOrder.order.total,
+                                    status = runCatching {
+                                        OrderStatus.valueOf(
+                                            storedOrder.order.status
+                                        )
+                                    }.getOrDefault(
+                                        OrderStatus.PENDING
+                                    ),
+                                    createdAt = storedOrder.order.createdAt
+                                )
+                            }
+                        }
+                    }
                 }
 
                 var lastPlacedOrder by remember {
