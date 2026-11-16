@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import land.noah.smartcafe.data.CafeRepository
 import land.noah.smartcafe.data.local.CafeDatabase
 import land.noah.smartcafe.data.local.FeedbackEntity
 import land.noah.smartcafe.data.local.OrderEntity
@@ -50,6 +51,13 @@ class MainActivity : ComponentActivity() {
 
     private val database by lazy {
         CafeDatabase.getInstance(applicationContext)
+    }
+
+    private val repository by lazy {
+        CafeRepository(
+            orderDao = database.orderDao(),
+            feedbackDao = database.feedbackDao()
+        )
     }
 
     private fun createNotificationChannel() {
@@ -164,47 +172,13 @@ class MainActivity : ComponentActivity() {
                         val currentUser = auth.currentUser
 
                         if (currentUser != null) {
-                            val storedOrders =
-                                database.orderDao()
-                                    .getOrdersForCustomer(currentUser.uid)
-
-                            orders = storedOrders.map { storedOrder ->
-                                Order(
-                                    id = storedOrder.order.id,
-                                    customerId = storedOrder.order.customerId,
-                                    items = storedOrder.items.map { item ->
-                                        OrderItem(
-                                            menuItemId = item.menuItemId,
-                                            name = item.name,
-                                            price = item.price,
-                                            quantity = item.quantity
-                                        )
-                                    },
-                                    total = storedOrder.order.total,
-                                    status = runCatching {
-                                        OrderStatus.valueOf(
-                                            storedOrder.order.status
-                                        )
-                                    }.getOrDefault(
-                                        OrderStatus.PENDING
-                                    ),
-                                    createdAt = storedOrder.order.createdAt
-                                )
-                            }
-
-                            val storedFeedback =
-                                database.feedbackDao()
-                                    .getFeedbackForCustomer(currentUser.uid)
-
-                            feedback = storedFeedback.map { item ->
-                                Feedback(
-                                    orderId = item.orderId,
-                                    customerId = item.customerId,
-                                    rating = item.rating,
-                                    comment = item.comment,
-                                    createdAt = item.createdAt
-                                )
-                            }
+                            orders = repository.getOrdersForCustomer(
+                                currentUser.uid
+                            )
+                            
+                            feedback = repository.getFeedbackForCustomer(
+                                currentUser.uid
+                            )
                         }
                     }
                 }
@@ -250,9 +224,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     coroutineScope.launch {
-                        database.orderDao().updateOrderStatus(
+                        repository.updateOrderStatus(
                             orderId = orderId,
-                            status = newStatus.name
+                            status = newStatus
                         )
                     }
 
@@ -287,18 +261,8 @@ class MainActivity : ComponentActivity() {
                                     existingFeedback.customerId == currentUser.uid
                         } + newFeedback
 
-                    val feedbackEntity = FeedbackEntity(
-                        orderId = newFeedback.orderId,
-                        customerId = newFeedback.customerId,
-                        rating = newFeedback.rating,
-                        comment = newFeedback.comment,
-                        createdAt = newFeedback.createdAt
-                    )
-
                     coroutineScope.launch {
-                        database.feedbackDao().upsertFeedback(
-                            feedbackEntity
-                        )
+                        repository.saveFeedback(newFeedback)
                     }
                 }
 
@@ -396,34 +360,13 @@ class MainActivity : ComponentActivity() {
                         createdAt = createdAt
                     )
 
-                    val orderEntity = OrderEntity(
-                        id = order.id,
-                        customerId = order.customerId,
-                        total = order.total,
-                        status = order.status.name,
-                        createdAt = order.createdAt
-                    )
-
-                    val orderItemEntities = order.items.map { item ->
-                        OrderItemEntity(
-                            orderId = order.id,
-                            menuItemId = item.menuItemId,
-                            name = item.name,
-                            price = item.price,
-                            quantity = item.quantity
-                        )
-                    }
-
                     orders = orders + order
                     lastPlacedOrder = order
                     cartItems = emptyList()
                     showingCart = false
 
                     coroutineScope.launch {
-                        database.orderDao().saveOrder(
-                            order = orderEntity,
-                            items = orderItemEntities
-                        )
+                        repository.saveOrder(order)
                     }
 
                     // simulate order statuses
