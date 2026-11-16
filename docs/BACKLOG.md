@@ -195,7 +195,7 @@ As a customer, I want to be notified when my order status changes so that I know
 - Role: Customer  
 - Priority: Could  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 

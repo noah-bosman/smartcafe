@@ -26,8 +26,10 @@ import land.noah.smartcafe.model.CartItem
 import land.noah.smartcafe.model.Feedback
 import land.noah.smartcafe.model.MenuItem
 import land.noah.smartcafe.model.Order
+import land.noah.smartcafe.model.OrderAnalytics
 import land.noah.smartcafe.model.OrderItem
 import land.noah.smartcafe.model.OrderStatus
+import land.noah.smartcafe.ui.screens.AnalyticsScreen
 import land.noah.smartcafe.ui.screens.CartScreen
 import land.noah.smartcafe.ui.screens.FeedbackScreen
 import land.noah.smartcafe.ui.screens.LoginScreen
@@ -166,6 +168,10 @@ class MainActivity : ComponentActivity() {
 
                 var feedbackOrder by remember {
                     mutableStateOf<Order?>(null)
+                }
+
+                var showingAnalytics by remember {
+                    mutableStateOf(false)
                 }
 
                 val coroutineScope = rememberCoroutineScope()
@@ -333,6 +339,49 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                fun calculateOrderAnalytics(
+                    orders: List<Order>
+                ): OrderAnalytics {
+                    val totalOrders = orders.size
+
+                    val totalSpend = orders.sumOf { order ->
+                        order.total
+                    }
+
+                    val averageOrderValue =
+                        if (totalOrders == 0) {
+                            0.0
+                        } else {
+                            totalSpend / totalOrders
+                        }
+
+                    val productQuantities = orders
+                        .flatMap { order ->
+                            order.items
+                        }
+                        .groupBy { item ->
+                            item.name
+                        }
+                        .mapValues { (_, items) ->
+                            items.sumOf { item ->
+                                item.quantity
+                            }
+                        }
+
+                    val mostOrderedProduct = productQuantities
+                        .maxByOrNull { (_, quantity) ->
+                            quantity
+                        }
+                        ?.key
+
+                    return OrderAnalytics(
+                        totalOrders = totalOrders,
+                        totalSpend = totalSpend,
+                        averageOrderValue = averageOrderValue,
+                        mostOrderedProduct = mostOrderedProduct
+                    )
+                }
+
                 if (isLoggedIn) {
                     val selectedItem = selectedMenuItem
                     val confirmedOrder = lastPlacedOrder
@@ -421,12 +470,32 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        showingAnalytics -> {
+                            val currentUserId = auth.currentUser?.uid
+
+                            val customerOrders = orders.filter { order ->
+                                order.customerId == currentUserId
+                            }
+
+                            val analytics = calculateOrderAnalytics(customerOrders)
+
+                            AnalyticsScreen(
+                                analytics = analytics,
+                                onBack = {
+                                    showingAnalytics = false
+                                }
+                            )
+                        }
+
                         else -> {
                             MenuScreen(
                                 menuItems = sampleMenu,
                                 cartItemCount = cartItemCount,
                                 onItemClick = { item ->
                                     selectedMenuItem = item
+                                },
+                                onAnalyticsClick = {
+                                    showingAnalytics = true
                                 },
                                 onCartClick = {
                                     showingCart = true
@@ -439,6 +508,7 @@ class MainActivity : ComponentActivity() {
                                     selectedMenuItem = null
                                     showingCart = false
                                     isLoggedIn = false
+                                    showingAnalytics = false
                                 }
                             )
                         }

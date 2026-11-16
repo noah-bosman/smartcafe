@@ -193,3 +193,22 @@
 - Android notification permission is requested
 - A dedicated `order_status` notification channel is used
 - Status changes drive both Order History updates and Android notifications
+
+## CAFE-12 Customer Order Analytics
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-12-01 | Open Analytics with no previous orders | Analytics display zero values and handle empty history without error | Total orders, total spend and average value displayed zero values; most ordered product displayed `No order data yet` | Pass |
+| T-CAFE-12-02 | Open Analytics after placing customer orders | Total number of orders is calculated correctly | Total orders matched the number of orders placed by the customer | Pass |
+| T-CAFE-12-03 | View Total Spend | Total spend equals the sum of the customer's order totals | Total spend matched the combined value of the placed orders | Pass |
+| T-CAFE-12-04 | View Average Order Value | Average equals total spend divided by total number of orders | Average order value was calculated correctly | Pass |
+| T-CAFE-12-05 | Order the same product multiple times across orders | Most ordered product is determined using total quantity ordered | The product with the highest accumulated quantity was displayed | Pass |
+| T-CAFE-12-06 | Open Analytics while authenticated | Metrics are calculated only from orders belonging to the current Firebase customer | Analytics used orders filtered by the authenticated customer UID | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Metrics include total orders, total spend, average order value and most frequently ordered
+- Empty order history is handled without division by zero errors
+- Product popularity is calculated by aggregating quantities across all matching order items
+- Analytics are filtered to the authenticated customer's orders
