@@ -172,4 +172,24 @@
 
 - Manual testing performed using the emulator
 - Feedback is linked to both an order ID and the customer
-- Ratings are validated to the range 1–5
+- Ratings are validated to the range 1-5
+
+## CAFE-11 Order Status Notifications
+
+| Test ID | Test | Expected Result | Actual Result | Status |
+|---|---|---|---|---|
+| T-CAFE-11-01 | Place a new customer order | The order begins with `PENDING` status | Newly placed order displayed `PENDING` | Pass |
+| T-CAFE-11-02 | Wait for the first simulated processing update | Order status changes from `PENDING` to `PREPARING` | Order History updated to `PREPARING` after the simulated delay | Pass |
+| T-CAFE-11-03 | Wait for the second simulated processing update | Order status changes from `PREPARING` to `READY_FOR_COLLECTION` | Order History updated to `READY_FOR_COLLECTION` after the second simulated delay | Pass |
+| T-CAFE-11-04 | Allow notification permission and trigger the `PREPARING` status update | Customer receives an Android notification describing the new status | Smart Café notification stated that the order was being prepared | Pass |
+| T-CAFE-11-05 | Trigger the `READY_FOR_COLLECTION` status update | Customer receives an Android notification that the order is ready | Smart Café notification stated that the order was ready for collection | Pass |
+| T-CAFE-11-06 | Compare notification state with Order History | Notification and stored in-memory order status represent the same transition | Notification content and Order History reflected the same status changes | Pass |
+
+### Evidence
+
+- Manual testing performed using the emulator
+- Individual-admin behaviour is simulated using coroutine delays
+- Status progresses through `PENDING` to `PREPARING` to `READY_FOR_COLLECTION`
+- Android notification permission is requested
+- A dedicated `order_status` notification channel is used
+- Status changes drive both Order History updates and Android notifications

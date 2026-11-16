@@ -180,7 +180,7 @@ As a customer, I want to leave a rating and feedback so that I can share my expe
 - Role: Customer  
 - Priority: Should  
 - Owner: Noah  
-- Status: To Do
+- Status: Done
 
 ### User Story
 
