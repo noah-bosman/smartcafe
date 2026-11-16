@@ -20,15 +20,17 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import land.noah.smartcafe.data.AuthRepository
 import land.noah.smartcafe.data.CafeRepository
 import land.noah.smartcafe.data.local.CafeDatabase
 import land.noah.smartcafe.data.sampleMenu
 import land.noah.smartcafe.model.MenuItem
 import land.noah.smartcafe.model.Order
 import land.noah.smartcafe.model.OrderStatus
+import land.noah.smartcafe.ui.AuthViewModel
+import land.noah.smartcafe.ui.AuthViewModelFactory
 import land.noah.smartcafe.ui.SmartCafeViewModel
 import land.noah.smartcafe.ui.SmartCafeViewModelFactory
 import land.noah.smartcafe.ui.screens.AnalyticsScreen
@@ -39,11 +41,18 @@ import land.noah.smartcafe.ui.screens.MenuScreen
 import land.noah.smartcafe.ui.screens.OrderConfirmationScreen
 import land.noah.smartcafe.ui.screens.OrderHistoryScreen
 import land.noah.smartcafe.ui.screens.ProductDetailScreen
+import land.noah.smartcafe.ui.screens.RegisterScreen
 import land.noah.smartcafe.ui.theme.SmartCafeTheme
 import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
-    private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) {
+            // No action required.
+        }
 
     private val database by lazy {
         CafeDatabase.getInstance(applicationContext)
@@ -56,12 +65,16 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val authRepository by lazy {
+        AuthRepository()
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "order_status",
                 "Order status",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Updates about café order status"
             }
@@ -112,7 +125,7 @@ class MainActivity : ComponentActivity() {
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Smart Café")
             .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
 
@@ -136,43 +149,36 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         createNotificationChannel()
         requestNotificationPermission()
+
         enableEdgeToEdge()
+
         setContent {
             SmartCafeTheme {
-                val auth = FirebaseAuth.getInstance()
-
                 val cafeViewModel: SmartCafeViewModel = viewModel(
                     factory = SmartCafeViewModelFactory(repository)
                 )
 
+                val authViewModel: AuthViewModel = viewModel(
+                    factory = AuthViewModelFactory(authRepository)
+                )
+
                 var isLoggedIn by remember {
-                    mutableStateOf(auth.currentUser != null)
+                    mutableStateOf(authViewModel.isLoggedIn)
+                }
+
+                var showingRegister by remember {
+                    mutableStateOf(false)
                 }
 
                 var selectedMenuItem by remember {
                     mutableStateOf<MenuItem?>(null)
                 }
 
-                LaunchedEffect(isLoggedIn) {
-                    if (isLoggedIn) {
-                        val currentUser = auth.currentUser
-
-                        if (currentUser != null) {
-                            cafeViewModel.loadCustomerData(
-                                currentUser.uid
-                            )
-                        }
-                    }
-                }
-
                 var lastPlacedOrder by remember {
                     mutableStateOf<Order?>(null)
-                }
-
-                val cartItemCount = cafeViewModel.cartItems.sumOf { cartItem ->
-                    cartItem.quantity
                 }
 
                 var showingCart by remember {
@@ -193,11 +199,35 @@ class MainActivity : ComponentActivity() {
 
                 val coroutineScope = rememberCoroutineScope()
 
+                LaunchedEffect(isLoggedIn) {
+                    if (isLoggedIn) {
+                        val currentUserId =
+                            authViewModel.currentUserId
+
+                        if (currentUserId != null) {
+                            cafeViewModel.loadCustomerData(
+                                currentUserId
+                            )
+                        }
+                    }
+                }
+
+                fun resetNavigationState() {
+                    selectedMenuItem = null
+                    lastPlacedOrder = null
+                    showingCart = false
+                    showingOrderHistory = false
+                    feedbackOrder = null
+                    showingAnalytics = false
+                }
+
                 fun placeOrder() {
-                    val currentUser = auth.currentUser ?: return
+                    val currentUserId =
+                        authViewModel.currentUserId
+                            ?: return
 
                     val order = cafeViewModel.placeOrder(
-                        customerId = currentUser.uid
+                        customerId = currentUserId
                     ) ?: return
 
                     lastPlacedOrder = order
@@ -220,12 +250,14 @@ class MainActivity : ComponentActivity() {
 
                         cafeViewModel.updateOrderStatus(
                             orderId = order.id,
-                            newStatus = OrderStatus.READY_FOR_COLLECTION
+                            newStatus =
+                                OrderStatus.READY_FOR_COLLECTION
                         )
 
                         showOrderStatusNotification(
                             orderId = order.id,
-                            status = OrderStatus.READY_FOR_COLLECTION
+                            status =
+                                OrderStatus.READY_FOR_COLLECTION
                         )
                     }
                 }
@@ -255,14 +287,15 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-
+ 
                         feedbackOrder != null -> {
                             val order = feedbackOrder!!
 
                             FeedbackScreen(
                                 order = order,
                                 onSubmit = { rating, comment ->
-                                    val currentUserId = auth.currentUser?.uid
+                                    val currentUserId =
+                                        authViewModel.currentUserId
 
                                     if (currentUserId != null) {
                                         cafeViewModel.submitFeedback(
@@ -283,15 +316,25 @@ class MainActivity : ComponentActivity() {
 
                         showingCart -> {
                             CartScreen(
-                                cartItems = cafeViewModel.cartItems,
+                                cartItems =
+                                    cafeViewModel.cartItems,
                                 onIncreaseQuantity = { menuItemId ->
-                                    cafeViewModel.increaseCartQuantity(menuItemId)
+                                    cafeViewModel
+                                        .increaseCartQuantity(
+                                            menuItemId
+                                        )
                                 },
                                 onDecreaseQuantity = { menuItemId ->
-                                    cafeViewModel.decreaseCartQuantity(menuItemId)
+                                    cafeViewModel
+                                        .decreaseCartQuantity(
+                                            menuItemId
+                                        )
                                 },
                                 onRemoveItem = { menuItemId ->
-                                    cafeViewModel.removeFromCart(menuItemId)
+                                    cafeViewModel
+                                        .removeFromCart(
+                                            menuItemId
+                                        )
                                 },
                                 onPlaceOrder = {
                                     placeOrder()
@@ -303,17 +346,24 @@ class MainActivity : ComponentActivity() {
                         }
 
                         showingOrderHistory -> {
-                            val currentUserId = auth.currentUser?.uid
+                            val currentUserId =
+                                authViewModel.currentUserId
 
-                            val customerOrders = cafeViewModel.orders.filter { order ->
-                                order.customerId == currentUserId
-                            }
+                            val customerOrders =
+                                cafeViewModel.orders.filter { order ->
+                                    order.customerId ==
+                                            currentUserId
+                                }
+
+                            val customerFeedback =
+                                cafeViewModel.feedback.filter { item ->
+                                    item.customerId ==
+                                            currentUserId
+                                }
 
                             OrderHistoryScreen(
                                 orders = customerOrders,
-                                feedback = cafeViewModel.feedback.filter { item ->
-                                    item.customerId == currentUserId
-                                },
+                                feedback = customerFeedback,
                                 onLeaveFeedback = { order ->
                                     feedbackOrder = order
                                 },
@@ -324,13 +374,16 @@ class MainActivity : ComponentActivity() {
                         }
 
                         showingAnalytics -> {
-                            val currentUserId = auth.currentUser?.uid
+                            val currentUserId =
+                                authViewModel.currentUserId
 
                             if (currentUserId != null) {
                                 AnalyticsScreen(
-                                    analytics = cafeViewModel.calculateOrderAnalytics(
-                                        currentUserId
-                                    ),
+                                    analytics =
+                                        cafeViewModel
+                                            .calculateOrderAnalytics(
+                                                currentUserId
+                                            ),
                                     onBack = {
                                         showingAnalytics = false
                                     }
@@ -341,7 +394,8 @@ class MainActivity : ComponentActivity() {
                         else -> {
                             MenuScreen(
                                 menuItems = sampleMenu,
-                                cartItemCount = cartItemCount,
+                                cartItemCount =
+                                    cafeViewModel.cartItemCount,
                                 onItemClick = { item ->
                                     selectedMenuItem = item
                                 },
@@ -355,21 +409,71 @@ class MainActivity : ComponentActivity() {
                                     showingOrderHistory = true
                                 },
                                 onLogout = {
-                                    auth.signOut()
-                                    selectedMenuItem = null
-                                    showingCart = false
+                                    authViewModel.logout()
+
+                                    resetNavigationState()
+
+                                    showingRegister = false
                                     isLoggedIn = false
-                                    showingAnalytics = false
                                 }
                             )
                         }
                     }
                 } else {
-                    LoginScreen(
-                        onLoginSuccess = {
-                            isLoggedIn = true
-                        }
-                    )
+                    if (showingRegister) {
+                        RegisterScreen(
+                            isLoading =
+                                authViewModel.isLoading,
+                            registrationError =
+                                authViewModel.errorMessage,
+                            onRegister = {
+                                    email,
+                                    password,
+                                    onSuccess ->
+
+                                authViewModel.register(
+                                    email = email,
+                                    password = password,
+                                    onSuccess = {
+                                        onSuccess()
+
+                                        /*
+                                         * Firebase signs in a newly
+                                         * created account automatically,
+                                         * so registration can enter the
+                                         * authenticated application.
+                                         */
+                                        isLoggedIn = true
+                                        showingRegister = false
+                                    }
+                                )
+                            },
+                            onBackToLogin = {
+                                authViewModel.clearError()
+                                showingRegister = false
+                            }
+                        )
+                    } else {
+                        LoginScreen(
+                            isLoading =
+                                authViewModel.isLoading,
+                            loginError =
+                                authViewModel.errorMessage,
+                            onLogin = { email, password ->
+                                authViewModel.login(
+                                    email = email,
+                                    password = password,
+                                    onSuccess = {
+                                        isLoggedIn = true
+                                    }
+                                )
+                            },
+                            onRegisterClick = {
+                                authViewModel.clearError()
+                                showingRegister = true
+                            }
+                        )
+                    }
                 }
             }
         }
