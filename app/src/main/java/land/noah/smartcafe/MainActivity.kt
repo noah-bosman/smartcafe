@@ -23,6 +23,7 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import land.noah.smartcafe.data.local.CafeDatabase
+import land.noah.smartcafe.data.local.FeedbackEntity
 import land.noah.smartcafe.data.local.OrderEntity
 import land.noah.smartcafe.data.local.OrderItemEntity
 import land.noah.smartcafe.data.sampleMenu
@@ -271,6 +272,20 @@ class MainActivity : ComponentActivity() {
                             existingFeedback.orderId == orderId &&
                                     existingFeedback.customerId == currentUser.uid
                         } + newFeedback
+
+                    val feedbackEntity = FeedbackEntity(
+                        orderId = newFeedback.orderId,
+                        customerId = newFeedback.customerId,
+                        rating = newFeedback.rating,
+                        comment = newFeedback.comment,
+                        createdAt = newFeedback.createdAt
+                    )
+
+                    coroutineScope.launch {
+                        database.feedbackDao().upsertFeedback(
+                            feedbackEntity
+                        )
+                    }
                 }
 
                 fun addToCart(menuItem: MenuItem) {
