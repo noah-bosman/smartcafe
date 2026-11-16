@@ -30,6 +30,7 @@ fun MenuScreen(
     cartItemCount: Int,
     onCartClick: () -> Unit,
     onOrdersClick: () -> Unit,
+    onAnalyticsClick: () -> Unit,
 ) {
     var searchQuery by remember {
         mutableStateOf("")
@@ -85,6 +86,12 @@ fun MenuScreen(
                 onClick = onOrdersClick
             ) {
                 Text("Orders")
+            }
+
+            TextButton(
+                onClick = onAnalyticsClick
+            ) {
+                Text("Analytics")
             }
 
             TextButton(
