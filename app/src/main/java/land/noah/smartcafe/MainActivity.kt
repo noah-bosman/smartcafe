@@ -1,14 +1,23 @@
 package land.noah.smartcafe
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -30,8 +39,90 @@ import land.noah.smartcafe.ui.theme.SmartCafeTheme
 import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
+    private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "order_status",
+                "Order status",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Updates about café order status"
+            }
+
+            val notificationManager =
+                getSystemService(NotificationManager::class.java)
+
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        }
+    }
+
+    private fun showOrderStatusNotification(
+        orderId: Long,
+        status: OrderStatus
+    ) {
+        val message = when (status) {
+            OrderStatus.PENDING ->
+                "Your order has been received"
+
+            OrderStatus.PREPARING ->
+                "Your order is now being prepared"
+
+            OrderStatus.READY_FOR_COLLECTION ->
+                "Your order is ready for collection"
+
+            OrderStatus.COLLECTED ->
+                "Your order has been collected"
+        }
+
+        val notification = NotificationCompat.Builder(
+            this,
+            "order_status"
+        )
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Smart Café")
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        NotificationManagerCompat
+            .from(this)
+            .notify(
+                (orderId + status.ordinal).hashCode(),
+                notification
+            )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
+        requestNotificationPermission()
         enableEdgeToEdge()
         setContent {
             SmartCafeTheme {
@@ -92,6 +183,11 @@ class MainActivity : ComponentActivity() {
                             order
                         }
                     }
+
+                    showOrderStatusNotification(
+                        orderId = orderId,
+                        status = newStatus
+                    )
                 }
 
                 fun submitFeedback(
