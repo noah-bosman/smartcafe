@@ -21,6 +21,9 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import land.noah.smartcafe.data.local.CafeDatabase
+import land.noah.smartcafe.data.local.OrderEntity
+import land.noah.smartcafe.data.local.OrderItemEntity
 import land.noah.smartcafe.data.sampleMenu
 import land.noah.smartcafe.model.CartItem
 import land.noah.smartcafe.model.Feedback
@@ -42,6 +45,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+    private val database by lazy {
+        CafeDatabase.getInstance(applicationContext)
+    }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -316,10 +323,35 @@ class MainActivity : ComponentActivity() {
                         createdAt = createdAt
                     )
 
+                    val orderEntity = OrderEntity(
+                        id = order.id,
+                        customerId = order.customerId,
+                        total = order.total,
+                        status = order.status.name,
+                        createdAt = order.createdAt
+                    )
+
+                    val orderItemEntities = order.items.map { item ->
+                        OrderItemEntity(
+                            orderId = order.id,
+                            menuItemId = item.menuItemId,
+                            name = item.name,
+                            price = item.price,
+                            quantity = item.quantity
+                        )
+                    }
+
                     orders = orders + order
                     lastPlacedOrder = order
                     cartItems = emptyList()
                     showingCart = false
+
+                    coroutineScope.launch {
+                        database.orderDao().saveOrder(
+                            order = orderEntity,
+                            items = orderItemEntities
+                        )
+                    }
 
                     // simulate order statuses
                     coroutineScope.launch {
