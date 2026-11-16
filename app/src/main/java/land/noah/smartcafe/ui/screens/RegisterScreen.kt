@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,24 +20,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
 
 @Composable
-fun RegisterScreen() {
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var confirmPassword by rememberSaveable { mutableStateOf("") }
+fun RegisterScreen(
+    isLoading: Boolean,
+    registrationError: String?,
+    onRegister: (
+        email: String,
+        password: String,
+        onSuccess: () -> Unit
+    ) -> Unit,
+    onBackToLogin: () -> Unit
+) {
+    var email by rememberSaveable {
+        mutableStateOf("")
+    }
 
-    var emailError by rememberSaveable { mutableStateOf<String?>(null) }
-    var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
-    var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var password by rememberSaveable {
+        mutableStateOf("")
+    }
 
-    val auth = FirebaseAuth.getInstance()
+    var confirmPassword by rememberSaveable {
+        mutableStateOf("")
+    }
 
-    var registrationError by rememberSaveable { mutableStateOf<String?>(null) }
-    var registrationSuccess by rememberSaveable { mutableStateOf(false) }
-    var isLoading by rememberSaveable { mutableStateOf(false) }
+    var emailError by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    var passwordError by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    var confirmPasswordError by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    var registrationSuccess by rememberSaveable {
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = Modifier
@@ -55,14 +77,17 @@ fun RegisterScreen() {
             onValueChange = {
                 email = it
                 emailError = null
+                registrationSuccess = false
             },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Email") },
+            label = {
+                Text("Email")
+            },
             singleLine = true,
             isError = emailError != null,
             supportingText = {
-                emailError?.let {
-                    Text(it)
+                emailError?.let { error ->
+                    Text(error)
                 }
             },
             keyboardOptions = KeyboardOptions(
@@ -75,14 +100,17 @@ fun RegisterScreen() {
             onValueChange = {
                 password = it
                 passwordError = null
+                registrationSuccess = false
             },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Password") },
+            label = {
+                Text("Password")
+            },
             singleLine = true,
             isError = passwordError != null,
             supportingText = {
-                passwordError?.let {
-                    Text(it)
+                passwordError?.let { error ->
+                    Text(error)
                 }
             },
             visualTransformation = PasswordVisualTransformation()
@@ -93,14 +121,17 @@ fun RegisterScreen() {
             onValueChange = {
                 confirmPassword = it
                 confirmPasswordError = null
+                registrationSuccess = false
             },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Confirm password") },
+            label = {
+                Text("Confirm password")
+            },
             singleLine = true,
             isError = confirmPasswordError != null,
             supportingText = {
-                confirmPasswordError?.let {
-                    Text(it)
+                confirmPasswordError?.let { error ->
+                    Text(error)
                 }
             },
             visualTransformation = PasswordVisualTransformation()
@@ -109,22 +140,38 @@ fun RegisterScreen() {
         Button(
             onClick = {
                 emailError = when {
-                    email.isBlank() -> "Email is required"
-                    !Patterns.EMAIL_ADDRESS.matcher(email).matches() ->
+                    email.isBlank() ->
+                        "Email is required"
+
+                    !Patterns.EMAIL_ADDRESS
+                        .matcher(email)
+                        .matches() ->
                         "Enter a valid email address"
-                    else -> null
+
+                    else ->
+                        null
                 }
 
                 passwordError = when {
-                    password.isBlank() -> "Password is required"
-                    password.length < 8 -> "Password must be at least 8 characters"
-                    else -> null
+                    password.isBlank() ->
+                        "Password is required"
+
+                    password.length < 8 ->
+                        "Password must be at least 8 characters"
+
+                    else ->
+                        null
                 }
 
                 confirmPasswordError = when {
-                    confirmPassword.isBlank() -> "Please confirm your password"
-                    confirmPassword != password -> "Passwords do not match"
-                    else -> null
+                    confirmPassword.isBlank() ->
+                        "Please confirm your password"
+
+                    confirmPassword != password ->
+                        "Passwords do not match"
+
+                    else ->
+                        null
                 }
 
                 val formIsValid =
@@ -133,41 +180,38 @@ fun RegisterScreen() {
                             confirmPasswordError == null
 
                 if (formIsValid) {
-                    registrationError = null
-                    isLoading = true
-
-                    auth.createUserWithEmailAndPassword(email, password)
-                        .addOnCompleteListener { task ->
-                            isLoading = false
-
-                            if (task.isSuccessful) {
-                                registrationSuccess = true
-                            } else {
-                                registrationError = when (task.exception) {
-                                    is FirebaseAuthUserCollisionException ->
-                                        "An account already exists with this email"
-
-                                    else ->
-                                        "Account creation failed. Please try again."
-                                }
-                            }
-                        }
+                    onRegister(
+                        email.trim(),
+                        password
+                    ) {
+                        registrationSuccess = true
+                    }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
             Text(
-                if (isLoading) "Creating account..."
-                else "Create account"
+                if (isLoading) {
+                    "Creating account..."
+                } else {
+                    "Create account"
+                }
             )
         }
 
-        registrationError?.let {
-            Text(it)
+        registrationError?.let { error ->
+            Text(error)
         }
 
         if (registrationSuccess) {
             Text("Account created successfully")
+        }
+
+        TextButton(
+            onClick = onBackToLogin
+        ) {
+            Text("Back to login")
         }
     }
 }

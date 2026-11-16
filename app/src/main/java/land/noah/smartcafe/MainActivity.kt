@@ -4,12 +4,13 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.PackageManager
-import android.os.Bundle
 import android.os.Build
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,17 +19,20 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import land.noah.smartcafe.data.AuthRepository
+import land.noah.smartcafe.data.CafeRepository
+import land.noah.smartcafe.data.local.CafeDatabase
 import land.noah.smartcafe.data.sampleMenu
-import land.noah.smartcafe.model.CartItem
-import land.noah.smartcafe.model.Feedback
 import land.noah.smartcafe.model.MenuItem
 import land.noah.smartcafe.model.Order
-import land.noah.smartcafe.model.OrderAnalytics
-import land.noah.smartcafe.model.OrderItem
 import land.noah.smartcafe.model.OrderStatus
+import land.noah.smartcafe.ui.AuthViewModel
+import land.noah.smartcafe.ui.AuthViewModelFactory
+import land.noah.smartcafe.ui.SmartCafeViewModel
+import land.noah.smartcafe.ui.SmartCafeViewModelFactory
 import land.noah.smartcafe.ui.screens.AnalyticsScreen
 import land.noah.smartcafe.ui.screens.CartScreen
 import land.noah.smartcafe.ui.screens.FeedbackScreen
@@ -37,18 +41,40 @@ import land.noah.smartcafe.ui.screens.MenuScreen
 import land.noah.smartcafe.ui.screens.OrderConfirmationScreen
 import land.noah.smartcafe.ui.screens.OrderHistoryScreen
 import land.noah.smartcafe.ui.screens.ProductDetailScreen
+import land.noah.smartcafe.ui.screens.RegisterScreen
 import land.noah.smartcafe.ui.theme.SmartCafeTheme
 import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
-    private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) {
+            // No action required.
+        }
+
+    private val database by lazy {
+        CafeDatabase.getInstance(applicationContext)
+    }
+
+    private val repository by lazy {
+        CafeRepository(
+            orderDao = database.orderDao(),
+            feedbackDao = database.feedbackDao()
+        )
+    }
+
+    private val authRepository by lazy {
+        AuthRepository()
+    }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "order_status",
                 "Order status",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Updates about café order status"
             }
@@ -99,7 +125,7 @@ class MainActivity : ComponentActivity() {
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Smart Café")
             .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
 
@@ -123,35 +149,36 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         createNotificationChannel()
         requestNotificationPermission()
+
         enableEdgeToEdge()
+
         setContent {
             SmartCafeTheme {
-                val auth = FirebaseAuth.getInstance()
+                val cafeViewModel: SmartCafeViewModel = viewModel(
+                    factory = SmartCafeViewModelFactory(repository)
+                )
+
+                val authViewModel: AuthViewModel = viewModel(
+                    factory = AuthViewModelFactory(authRepository)
+                )
 
                 var isLoggedIn by remember {
-                    mutableStateOf(auth.currentUser != null)
+                    mutableStateOf(authViewModel.isLoggedIn)
+                }
+
+                var showingRegister by remember {
+                    mutableStateOf(false)
                 }
 
                 var selectedMenuItem by remember {
                     mutableStateOf<MenuItem?>(null)
                 }
 
-                var cartItems by remember {
-                    mutableStateOf<List<CartItem>>(emptyList())
-                }
-
-                var orders by remember {
-                    mutableStateOf<List<Order>>(emptyList())
-                }
-
                 var lastPlacedOrder by remember {
                     mutableStateOf<Order?>(null)
-                }
-
-                val cartItemCount = cartItems.sumOf { cartItem ->
-                    cartItem.quantity
                 }
 
                 var showingCart by remember {
@@ -160,10 +187,6 @@ class MainActivity : ComponentActivity() {
 
                 var showingOrderHistory by remember {
                     mutableStateOf(false)
-                }
-
-                var feedback by remember {
-                    mutableStateOf<List<Feedback>>(emptyList())
                 }
 
                 var feedbackOrder by remember {
@@ -176,210 +199,67 @@ class MainActivity : ComponentActivity() {
 
                 val coroutineScope = rememberCoroutineScope()
 
-                fun updateOrderStatus(
-                    orderId: Long,
-                    newStatus: OrderStatus
-                ) {
-                    orders = orders.map { order ->
-                        if (order.id == orderId) {
-                            order.copy(
-                                status = newStatus
+                LaunchedEffect(isLoggedIn) {
+                    if (isLoggedIn) {
+                        val currentUserId =
+                            authViewModel.currentUserId
+
+                        if (currentUserId != null) {
+                            cafeViewModel.loadCustomerData(
+                                currentUserId
                             )
-                        } else {
-                            order
-                        }
-                    }
-
-                    showOrderStatusNotification(
-                        orderId = orderId,
-                        status = newStatus
-                    )
-                }
-
-                fun submitFeedback(
-                    orderId: Long,
-                    rating: Int,
-                    comment: String
-                ) {
-                    val currentUser = auth.currentUser ?: return
-
-                    if (rating !in 1..5) {
-                        return
-                    }
-
-                    val newFeedback = Feedback(
-                        orderId = orderId,
-                        customerId = currentUser.uid,
-                        rating = rating,
-                        comment = comment.trim(),
-                        createdAt = System.currentTimeMillis()
-                    )
-
-                    feedback = feedback
-                        .filterNot { existingFeedback ->
-                            existingFeedback.orderId == orderId &&
-                                    existingFeedback.customerId == currentUser.uid
-                        } + newFeedback
-                }
-
-                fun addToCart(menuItem: MenuItem) {
-                    if (!menuItem.available) {
-                        return
-                    }
-
-                    val existingItem = cartItems.find { cartItem ->
-                        cartItem.menuItem.id == menuItem.id
-                    }
-
-                    cartItems = if (existingItem == null) {
-                        cartItems + CartItem(
-                            menuItem = menuItem,
-                            quantity = 1
-                        )
-                    } else {
-                        cartItems.map { cartItem ->
-                            if (cartItem.menuItem.id == menuItem.id) {
-                                cartItem.copy(
-                                    quantity = cartItem.quantity + 1
-                                )
-                            } else {
-                                cartItem
-                            }
                         }
                     }
                 }
 
-                fun increaseCartQuantity(menuItemId: Int) {
-                    cartItems = cartItems.map { cartItem ->
-                        if (cartItem.menuItem.id == menuItemId) {
-                            cartItem.copy(
-                                quantity = cartItem.quantity + 1
-                            )
-                        } else {
-                            cartItem
-                        }
-                    }
-                }
-
-                fun decreaseCartQuantity(menuItemId: Int) {
-                    cartItems = cartItems.mapNotNull { cartItem ->
-                        if (cartItem.menuItem.id == menuItemId) {
-                            val newQuantity = cartItem.quantity - 1
-
-                            if (newQuantity <= 0) {
-                                null
-                            } else {
-                                cartItem.copy(
-                                    quantity = newQuantity
-                                )
-                            }
-                        } else {
-                            cartItem
-                        }
-                    }
-                }
-
-                fun removeFromCart(menuItemId: Int) {
-                    cartItems = cartItems.filterNot { cartItem ->
-                        cartItem.menuItem.id == menuItemId
-                    }
+                fun resetNavigationState() {
+                    selectedMenuItem = null
+                    lastPlacedOrder = null
+                    showingCart = false
+                    showingOrderHistory = false
+                    feedbackOrder = null
+                    showingAnalytics = false
                 }
 
                 fun placeOrder() {
-                    if (cartItems.isEmpty()) {
-                        return
-                    }
+                    val currentUserId =
+                        authViewModel.currentUserId
+                            ?: return
 
-                    val currentUser = auth.currentUser ?: return
+                    val order = cafeViewModel.placeOrder(
+                        customerId = currentUserId
+                    ) ?: return
 
-                    val createdAt = System.currentTimeMillis()
-
-                    val orderItems = cartItems.map { cartItem ->
-                        OrderItem(
-                            menuItemId = cartItem.menuItem.id,
-                            name = cartItem.menuItem.name,
-                            price = cartItem.menuItem.price,
-                            quantity = cartItem.quantity
-                        )
-                    }
-
-                    val total = orderItems.sumOf { orderItem ->
-                        orderItem.subtotal
-                    }
-
-                    val order = Order(
-                        id = createdAt,
-                        customerId = currentUser.uid,
-                        items = orderItems,
-                        total = total,
-                        status = OrderStatus.PENDING,
-                        createdAt = createdAt
-                    )
-
-                    orders = orders + order
                     lastPlacedOrder = order
-                    cartItems = emptyList()
                     showingCart = false
 
-                    // simulate order statuses
                     coroutineScope.launch {
                         delay(5_000.milliseconds)
 
-                        updateOrderStatus(
+                        cafeViewModel.updateOrderStatus(
                             orderId = order.id,
                             newStatus = OrderStatus.PREPARING
                         )
 
+                        showOrderStatusNotification(
+                            orderId = order.id,
+                            status = OrderStatus.PREPARING
+                        )
+
                         delay(5_000.milliseconds)
 
-                        updateOrderStatus(
+                        cafeViewModel.updateOrderStatus(
                             orderId = order.id,
-                            newStatus = OrderStatus.READY_FOR_COLLECTION
+                            newStatus =
+                                OrderStatus.READY_FOR_COLLECTION
+                        )
+
+                        showOrderStatusNotification(
+                            orderId = order.id,
+                            status =
+                                OrderStatus.READY_FOR_COLLECTION
                         )
                     }
-                }
-
-                fun calculateOrderAnalytics(
-                    orders: List<Order>
-                ): OrderAnalytics {
-                    val totalOrders = orders.size
-
-                    val totalSpend = orders.sumOf { order ->
-                        order.total
-                    }
-
-                    val averageOrderValue =
-                        if (totalOrders == 0) {
-                            0.0
-                        } else {
-                            totalSpend / totalOrders
-                        }
-
-                    val productQuantities = orders
-                        .flatMap { order ->
-                            order.items
-                        }
-                        .groupBy { item ->
-                            item.name
-                        }
-                        .mapValues { (_, items) ->
-                            items.sumOf { item ->
-                                item.quantity
-                            }
-                        }
-
-                    val mostOrderedProduct = productQuantities
-                        .maxByOrNull { (_, quantity) ->
-                            quantity
-                        }
-                        ?.key
-
-                    return OrderAnalytics(
-                        totalOrders = totalOrders,
-                        totalSpend = totalSpend,
-                        averageOrderValue = averageOrderValue,
-                        mostOrderedProduct = mostOrderedProduct
-                    )
                 }
 
                 if (isLoggedIn) {
@@ -403,7 +283,7 @@ class MainActivity : ComponentActivity() {
                                     selectedMenuItem = null
                                 },
                                 onAddToCart = { item ->
-                                    addToCart(item)
+                                    cafeViewModel.addToCart(item)
                                 }
                             )
                         }
@@ -414,11 +294,17 @@ class MainActivity : ComponentActivity() {
                             FeedbackScreen(
                                 order = order,
                                 onSubmit = { rating, comment ->
-                                    submitFeedback(
-                                        orderId = order.id,
-                                        rating = rating,
-                                        comment = comment
-                                    )
+                                    val currentUserId =
+                                        authViewModel.currentUserId
+
+                                    if (currentUserId != null) {
+                                        cafeViewModel.submitFeedback(
+                                            customerId = currentUserId,
+                                            orderId = order.id,
+                                            rating = rating,
+                                            comment = comment
+                                        )
+                                    }
 
                                     feedbackOrder = null
                                 },
@@ -430,15 +316,25 @@ class MainActivity : ComponentActivity() {
 
                         showingCart -> {
                             CartScreen(
-                                cartItems = cartItems,
+                                cartItems =
+                                    cafeViewModel.cartItems,
                                 onIncreaseQuantity = { menuItemId ->
-                                    increaseCartQuantity(menuItemId)
+                                    cafeViewModel
+                                        .increaseCartQuantity(
+                                            menuItemId
+                                        )
                                 },
                                 onDecreaseQuantity = { menuItemId ->
-                                    decreaseCartQuantity(menuItemId)
+                                    cafeViewModel
+                                        .decreaseCartQuantity(
+                                            menuItemId
+                                        )
                                 },
                                 onRemoveItem = { menuItemId ->
-                                    removeFromCart(menuItemId)
+                                    cafeViewModel
+                                        .removeFromCart(
+                                            menuItemId
+                                        )
                                 },
                                 onPlaceOrder = {
                                     placeOrder()
@@ -450,17 +346,24 @@ class MainActivity : ComponentActivity() {
                         }
 
                         showingOrderHistory -> {
-                            val currentUserId = auth.currentUser?.uid
+                            val currentUserId =
+                                authViewModel.currentUserId
 
-                            val customerOrders = orders.filter { order ->
-                                order.customerId == currentUserId
-                            }
+                            val customerOrders =
+                                cafeViewModel.orders.filter { order ->
+                                    order.customerId ==
+                                            currentUserId
+                                }
+
+                            val customerFeedback =
+                                cafeViewModel.feedback.filter { item ->
+                                    item.customerId ==
+                                            currentUserId
+                                }
 
                             OrderHistoryScreen(
                                 orders = customerOrders,
-                                feedback = feedback.filter { item ->
-                                    item.customerId == currentUserId
-                                },
+                                feedback = customerFeedback,
                                 onLeaveFeedback = { order ->
                                     feedbackOrder = order
                                 },
@@ -471,26 +374,28 @@ class MainActivity : ComponentActivity() {
                         }
 
                         showingAnalytics -> {
-                            val currentUserId = auth.currentUser?.uid
+                            val currentUserId =
+                                authViewModel.currentUserId
 
-                            val customerOrders = orders.filter { order ->
-                                order.customerId == currentUserId
+                            if (currentUserId != null) {
+                                AnalyticsScreen(
+                                    analytics =
+                                        cafeViewModel
+                                            .calculateOrderAnalytics(
+                                                currentUserId
+                                            ),
+                                    onBack = {
+                                        showingAnalytics = false
+                                    }
+                                )
                             }
-
-                            val analytics = calculateOrderAnalytics(customerOrders)
-
-                            AnalyticsScreen(
-                                analytics = analytics,
-                                onBack = {
-                                    showingAnalytics = false
-                                }
-                            )
                         }
 
                         else -> {
                             MenuScreen(
                                 menuItems = sampleMenu,
-                                cartItemCount = cartItemCount,
+                                cartItemCount =
+                                    cafeViewModel.cartItemCount,
                                 onItemClick = { item ->
                                     selectedMenuItem = item
                                 },
@@ -504,21 +409,71 @@ class MainActivity : ComponentActivity() {
                                     showingOrderHistory = true
                                 },
                                 onLogout = {
-                                    auth.signOut()
-                                    selectedMenuItem = null
-                                    showingCart = false
+                                    authViewModel.logout()
+
+                                    resetNavigationState()
+
+                                    showingRegister = false
                                     isLoggedIn = false
-                                    showingAnalytics = false
                                 }
                             )
                         }
                     }
                 } else {
-                    LoginScreen(
-                        onLoginSuccess = {
-                            isLoggedIn = true
-                        }
-                    )
+                    if (showingRegister) {
+                        RegisterScreen(
+                            isLoading =
+                                authViewModel.isLoading,
+                            registrationError =
+                                authViewModel.errorMessage,
+                            onRegister = {
+                                    email,
+                                    password,
+                                    onSuccess ->
+
+                                authViewModel.register(
+                                    email = email,
+                                    password = password,
+                                    onSuccess = {
+                                        onSuccess()
+
+                                        /*
+                                         * Firebase signs in a newly
+                                         * created account automatically,
+                                         * so registration can enter the
+                                         * authenticated application.
+                                         */
+                                        isLoggedIn = true
+                                        showingRegister = false
+                                    }
+                                )
+                            },
+                            onBackToLogin = {
+                                authViewModel.clearError()
+                                showingRegister = false
+                            }
+                        )
+                    } else {
+                        LoginScreen(
+                            isLoading =
+                                authViewModel.isLoading,
+                            loginError =
+                                authViewModel.errorMessage,
+                            onLogin = { email, password ->
+                                authViewModel.login(
+                                    email = email,
+                                    password = password,
+                                    onSuccess = {
+                                        isLoggedIn = true
+                                    }
+                                )
+                            },
+                            onRegisterClick = {
+                                authViewModel.clearError()
+                                showingRegister = true
+                            }
+                        )
+                    }
                 }
             }
         }
