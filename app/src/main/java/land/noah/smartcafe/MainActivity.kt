@@ -197,6 +197,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    coroutineScope.launch {
+                        database.orderDao().updateOrderStatus(
+                            orderId = orderId,
+                            status = newStatus.name
+                        )
+                    }
+
                     showOrderStatusNotification(
                         orderId = orderId,
                         status = newStatus
