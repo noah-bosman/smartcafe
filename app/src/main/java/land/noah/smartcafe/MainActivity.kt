@@ -7,8 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import land.noah.smartcafe.data.sampleMenu
 import land.noah.smartcafe.model.CartItem
 import land.noah.smartcafe.model.Feedback
@@ -24,6 +27,7 @@ import land.noah.smartcafe.ui.screens.OrderConfirmationScreen
 import land.noah.smartcafe.ui.screens.OrderHistoryScreen
 import land.noah.smartcafe.ui.screens.ProductDetailScreen
 import land.noah.smartcafe.ui.theme.SmartCafeTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +75,23 @@ class MainActivity : ComponentActivity() {
 
                 var feedbackOrder by remember {
                     mutableStateOf<Order?>(null)
+                }
+
+                val coroutineScope = rememberCoroutineScope()
+
+                fun updateOrderStatus(
+                    orderId: Long,
+                    newStatus: OrderStatus
+                ) {
+                    orders = orders.map { order ->
+                        if (order.id == orderId) {
+                            order.copy(
+                                status = newStatus
+                            )
+                        } else {
+                            order
+                        }
+                    }
                 }
 
                 fun submitFeedback(
@@ -197,6 +218,23 @@ class MainActivity : ComponentActivity() {
                     lastPlacedOrder = order
                     cartItems = emptyList()
                     showingCart = false
+
+                    // simulate order statuses
+                    coroutineScope.launch {
+                        delay(5_000.milliseconds)
+
+                        updateOrderStatus(
+                            orderId = order.id,
+                            newStatus = OrderStatus.PREPARING
+                        )
+
+                        delay(5_000.milliseconds)
+
+                        updateOrderStatus(
+                            orderId = order.id,
+                            newStatus = OrderStatus.READY_FOR_COLLECTION
+                        )
+                    }
                 }
 
                 if (isLoggedIn) {

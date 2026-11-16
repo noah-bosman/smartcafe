@@ -172,4 +172,4 @@
 
 - Manual testing performed using the emulator
 - Feedback is linked to both an order ID and the customer
-- Ratings are validated to the range 1–5
+- Ratings are validated to the range 1-5
