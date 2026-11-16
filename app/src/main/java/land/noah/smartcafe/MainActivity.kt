@@ -4,8 +4,8 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.PackageManager
-import android.os.Bundle
 import android.os.Build
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,22 +19,20 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import land.noah.smartcafe.data.CafeRepository
 import land.noah.smartcafe.data.local.CafeDatabase
-import land.noah.smartcafe.data.local.FeedbackEntity
-import land.noah.smartcafe.data.local.OrderEntity
-import land.noah.smartcafe.data.local.OrderItemEntity
 import land.noah.smartcafe.data.sampleMenu
-import land.noah.smartcafe.model.CartItem
 import land.noah.smartcafe.model.Feedback
 import land.noah.smartcafe.model.MenuItem
 import land.noah.smartcafe.model.Order
 import land.noah.smartcafe.model.OrderAnalytics
 import land.noah.smartcafe.model.OrderItem
 import land.noah.smartcafe.model.OrderStatus
+import land.noah.smartcafe.ui.SmartCafeViewModel
 import land.noah.smartcafe.ui.screens.AnalyticsScreen
 import land.noah.smartcafe.ui.screens.CartScreen
 import land.noah.smartcafe.ui.screens.FeedbackScreen
@@ -147,16 +145,14 @@ class MainActivity : ComponentActivity() {
             SmartCafeTheme {
                 val auth = FirebaseAuth.getInstance()
 
+                val cafeViewModel: SmartCafeViewModel = viewModel()
+
                 var isLoggedIn by remember {
                     mutableStateOf(auth.currentUser != null)
                 }
 
                 var selectedMenuItem by remember {
                     mutableStateOf<MenuItem?>(null)
-                }
-
-                var cartItems by remember {
-                    mutableStateOf<List<CartItem>>(emptyList())
                 }
 
                 var orders by remember {
@@ -175,7 +171,7 @@ class MainActivity : ComponentActivity() {
                             orders = repository.getOrdersForCustomer(
                                 currentUser.uid
                             )
-                            
+
                             feedback = repository.getFeedbackForCustomer(
                                 currentUser.uid
                             )
@@ -187,7 +183,7 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<Order?>(null)
                 }
 
-                val cartItemCount = cartItems.sumOf { cartItem ->
+                val cartItemCount = cafeViewModel.cartItems.sumOf { cartItem ->
                     cartItem.quantity
                 }
 
@@ -266,71 +262,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                fun addToCart(menuItem: MenuItem) {
-                    if (!menuItem.available) {
-                        return
-                    }
-
-                    val existingItem = cartItems.find { cartItem ->
-                        cartItem.menuItem.id == menuItem.id
-                    }
-
-                    cartItems = if (existingItem == null) {
-                        cartItems + CartItem(
-                            menuItem = menuItem,
-                            quantity = 1
-                        )
-                    } else {
-                        cartItems.map { cartItem ->
-                            if (cartItem.menuItem.id == menuItem.id) {
-                                cartItem.copy(
-                                    quantity = cartItem.quantity + 1
-                                )
-                            } else {
-                                cartItem
-                            }
-                        }
-                    }
-                }
-
-                fun increaseCartQuantity(menuItemId: Int) {
-                    cartItems = cartItems.map { cartItem ->
-                        if (cartItem.menuItem.id == menuItemId) {
-                            cartItem.copy(
-                                quantity = cartItem.quantity + 1
-                            )
-                        } else {
-                            cartItem
-                        }
-                    }
-                }
-
-                fun decreaseCartQuantity(menuItemId: Int) {
-                    cartItems = cartItems.mapNotNull { cartItem ->
-                        if (cartItem.menuItem.id == menuItemId) {
-                            val newQuantity = cartItem.quantity - 1
-
-                            if (newQuantity <= 0) {
-                                null
-                            } else {
-                                cartItem.copy(
-                                    quantity = newQuantity
-                                )
-                            }
-                        } else {
-                            cartItem
-                        }
-                    }
-                }
-
-                fun removeFromCart(menuItemId: Int) {
-                    cartItems = cartItems.filterNot { cartItem ->
-                        cartItem.menuItem.id == menuItemId
-                    }
-                }
-
                 fun placeOrder() {
-                    if (cartItems.isEmpty()) {
+                    if (cafeViewModel.cartItems.isEmpty()) {
                         return
                     }
 
@@ -338,7 +271,7 @@ class MainActivity : ComponentActivity() {
 
                     val createdAt = System.currentTimeMillis()
 
-                    val orderItems = cartItems.map { cartItem ->
+                    val orderItems = cafeViewModel.cartItems.map { cartItem ->
                         OrderItem(
                             menuItemId = cartItem.menuItem.id,
                             name = cartItem.menuItem.name,
@@ -362,7 +295,7 @@ class MainActivity : ComponentActivity() {
 
                     orders = orders + order
                     lastPlacedOrder = order
-                    cartItems = emptyList()
+                    cafeViewModel.cartItems = emptyList()
                     showingCart = false
 
                     coroutineScope.launch {
@@ -451,7 +384,7 @@ class MainActivity : ComponentActivity() {
                                     selectedMenuItem = null
                                 },
                                 onAddToCart = { item ->
-                                    addToCart(item)
+                                    cafeViewModel.addToCart(item)
                                 }
                             )
                         }
@@ -478,15 +411,15 @@ class MainActivity : ComponentActivity() {
 
                         showingCart -> {
                             CartScreen(
-                                cartItems = cartItems,
+                                cartItems = cafeViewModel.cartItems,
                                 onIncreaseQuantity = { menuItemId ->
-                                    increaseCartQuantity(menuItemId)
+                                    cafeViewModel.increaseCartQuantity(menuItemId)
                                 },
                                 onDecreaseQuantity = { menuItemId ->
-                                    decreaseCartQuantity(menuItemId)
+                                    cafeViewModel.decreaseCartQuantity(menuItemId)
                                 },
                                 onRemoveItem = { menuItemId ->
-                                    removeFromCart(menuItemId)
+                                    cafeViewModel.removeFromCart(menuItemId)
                                 },
                                 onPlaceOrder = {
                                     placeOrder()
